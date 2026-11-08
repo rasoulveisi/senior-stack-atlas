@@ -196,13 +196,13 @@ cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: editing 1 line in a 20-bullet resume</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">All bullets</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">All bullets</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="20"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">20 calls</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">SHA-256 diff</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">SHA-256 diff</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 call</span>
         </div>
@@ -858,13 +858,13 @@ cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
     <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
       <figcaption class="text-sm font-semibold text-white">Database round-trips to load 50 applications and their analyses</figcaption>
       <div data-chart class="mt-4 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">N+1 loop (1 + 50)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">N+1 loop (1 + 50)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="51"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">51 trips</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Batched query</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Batched query</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">2 trips</span>
         </div>

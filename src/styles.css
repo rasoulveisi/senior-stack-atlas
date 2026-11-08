@@ -16,6 +16,12 @@
 }
 
   html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+  /* Phones: content must never make the page wider than the screen. */
+  main { overflow-wrap: break-word; }
+  .ic, .chip { overflow-wrap: anywhere; max-width: 100%; }
+  .grid > * { min-width: 0; }
+  p.flex, h4.flex, figcaption.flex { flex-wrap: wrap; row-gap: .25rem; }
+  html, body { overflow-x: clip; }
   body { background: #091B20; }
   mark.hl { background: rgba(2,239,240,.14); color: #45F3F4; padding: 0 .25em; border-radius: .35em; }
   .brand-glow { background:

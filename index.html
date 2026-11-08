@@ -668,13 +668,13 @@ export default {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Legacy mobile PWA requests <code class="ic">/api/v1/workout-plans/active</code></figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[9rem_1fr_7rem] sm:grid-cols-[13rem_1fr_8rem] items-center gap-3">
-          <span class="text-sm text-storm-200">HTTP <code class="ic">301</code>/<code class="ic">302</code> redirect</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[13rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">HTTP <code class="ic">301</code>/<code class="ic">302</code> redirect</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2 round-trips</span>
         </div>
-        <div class="grid grid-cols-[9rem_1fr_7rem] sm:grid-cols-[13rem_1fr_8rem] items-center gap-3">
-          <span class="text-sm text-storm-200">In-memory <code class="ic">req.url</code> rewrite</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[13rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">In-memory <code class="ic">req.url</code> rewrite</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 round-trip</span>
         </div>
@@ -1246,18 +1246,18 @@ if (!parsed.success) return parsed.response;
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white"><code class="ic">POST /api/v1/auth/login</code> CPU time per attempt</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Unknown email (naive early return)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Unknown email (naive early return)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2 ms</span>
         </div>
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Known email (real PBKDF2)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Known email (real PBKDF2)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="45"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">45 ms</span>
         </div>
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Unknown email + <code class="ic">DUMMY_PASSWORD_HASH</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Unknown email + <code class="ic">DUMMY_PASSWORD_HASH</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="45"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">45 ms</span>
         </div>
@@ -1619,13 +1619,13 @@ return drizzle(client, { schema });</code></pre>
         <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
           <figcaption class="text-sm font-semibold text-white">Cold-start database round-trips for the first query</figcaption>
           <div data-chart class="mt-4 space-y-4">
-            <div class="grid grid-cols-[10rem_1fr_7rem] sm:grid-cols-[15rem_1fr_8rem] items-center gap-3">
-              <span class="text-sm text-storm-200">Default (<code class="ic">pg_type</code> + query)</span>
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+              <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Default (<code class="ic">pg_type</code> + query)</span>
               <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
               <span class="font-mono text-sm text-coral-300 text-right">2 round-trips</span>
             </div>
-            <div class="grid grid-cols-[10rem_1fr_7rem] sm:grid-cols-[15rem_1fr_8rem] items-center gap-3">
-              <span class="text-sm text-storm-200"><code class="ic">fetch_types: false</code></span>
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+              <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">fetch_types: false</code></span>
               <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
               <span class="font-mono text-sm text-vivid-300 text-right">1 round-trip</span>
             </div>
@@ -2499,13 +2499,13 @@ testableApp.fetch = async (input, init, bindings) =&gt; {
       <figure class="mt-5 rounded-2xl border border-storm-700 bg-storm-900 p-4">
         <figcaption class="text-xs font-semibold text-white">Loading 20 workout sessions with their exercises</figcaption>
         <div data-chart class="mt-3 space-y-3">
-          <div class="grid grid-cols-[9.5rem_1fr_5.5rem] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-3">
-            <span class="text-xs text-storm-200"><code class="ic">for</code> loop N+1 (<code class="ic">1 + 20</code>)</span>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+            <span class="col-span-2 sm:col-span-1 text-xs text-storm-200"><code class="ic">for</code> loop N+1 (<code class="ic">1 + 20</code>)</span>
             <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="21"></div></div>
             <span class="font-mono text-xs text-coral-300 text-right">21 queries</span>
           </div>
-          <div class="grid grid-cols-[9.5rem_1fr_5.5rem] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-3">
-            <span class="text-xs text-storm-200"><code class="ic">inArray()</code> + <code class="ic">Map</code></span>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+            <span class="col-span-2 sm:col-span-1 text-xs text-storm-200"><code class="ic">inArray()</code> + <code class="ic">Map</code></span>
             <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
             <span class="font-mono text-xs text-vivid-300 text-right">2 queries</span>
           </div>
@@ -3270,13 +3270,13 @@ var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();</code><
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">First user click: cold cloud Postgres connection vs pre-warmed pool</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Cold connection</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Cold connection</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="3000"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2–3 s</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Warm pool</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Warm pool</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="40"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">40 ms</span>
         </div>
@@ -3328,13 +3328,13 @@ var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();</code><
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">6 independent read queries in <code class="ic">ApplicationService.GetByIdAsync</code> (database 40 ms away)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">6 × 40 ms one by one</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">6 × 40 ms one by one</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="240"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">240 ms</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Parallel factory</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Parallel factory</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="40"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">~40 ms</span>
         </div>
@@ -3795,13 +3795,13 @@ cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: editing 1 line in a 20-bullet resume</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">All bullets</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">All bullets</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="20"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">20 calls</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">SHA-256 diff</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">SHA-256 diff</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 call</span>
         </div>
@@ -4457,13 +4457,13 @@ cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
     <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
       <figcaption class="text-sm font-semibold text-white">Database round-trips to load 50 applications and their analyses</figcaption>
       <div data-chart class="mt-4 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">N+1 loop (1 + 50)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">N+1 loop (1 + 50)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="51"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">51 trips</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Batched query</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Batched query</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">2 trips</span>
         </div>
@@ -5029,13 +5029,13 @@ if (defaultValue !== seenUrlValue) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: DOM listener subscriptions across 10 keystrokes (inline arrow handler)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">[key, handler]</code> deps</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">[key, handler]</code> deps</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="10"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">10 binds</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 bind</span>
         </div>
@@ -5252,13 +5252,13 @@ export function LocalTime({ date }: { date: Date }) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: Components re-rendered per toast popup (app with 25 <code class="ic">useToast()</code> callers)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">toasts</code> in Context</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">toasts</code> in Context</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="25"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">25 renders</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Only <code class="ic">toast</code> fn</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Only <code class="ic">toast</code> fn</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 render</span>
         </div>
@@ -5423,31 +5423,31 @@ export function useToast(): ShowToast {
         <p class="text-sm font-semibold text-white">6-step <code class="ic">StatusControl</code> lifecycle · Success vs failure branch</p>
         <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
       </div>
-      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">01</p>
           <p class="font-semibold text-white">Select</p>
           <p class="text-xs text-storm-300">User picks <code class="ic">"in_progress"</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">02</p>
           <p class="font-semibold text-white">Transition</p>
           <p class="text-xs text-storm-300"><code class="ic">startTransition</code> sets <code class="ic">pending = true</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
           <p class="font-mono text-[11px] text-vivid-300">03</p>
           <p class="font-semibold text-white">Optimistic UI</p>
           <p class="text-xs text-storm-300"><code class="ic">setOptimisticStatus</code> shows it with zero delay.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">04</p>
           <p class="font-semibold text-white">Server Action</p>
           <p class="text-xs text-storm-300"><code class="ic">changeStatusAction</code> + <code class="ic">updateTag</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
           <p class="font-mono text-[11px] text-vivid-300">05 · if ok</p>
           <p class="font-semibold text-white">Streams new prop</p>
@@ -5666,13 +5666,13 @@ function onChange(next: IssueStatus) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Two independent queries in <code class="ic">IssueListSection</code>: sequential waterfall vs <code class="ic">Promise.all</code></figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Sequential <code class="ic">await</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Sequential <code class="ic">await</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">sum of both</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">Promise.all</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">Promise.all</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">slower only</span>
         </div>
@@ -5852,13 +5852,13 @@ function onChange(next: IssueStatus) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">100 users viewing issue <code class="ic">WEB-1</code>: DB queries when <code class="ic">actor</code> is inside vs outside cache args</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">actor</code> in cache args</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">actor</code> in cache args</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="100"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">100 queries</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">actor</code> outside</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">actor</code> outside</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 shared hit</span>
         </div>

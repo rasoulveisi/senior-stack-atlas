@@ -336,13 +336,13 @@ export default {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Legacy mobile PWA requests <code class="ic">/api/v1/workout-plans/active</code></figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[9rem_1fr_7rem] sm:grid-cols-[13rem_1fr_8rem] items-center gap-3">
-          <span class="text-sm text-storm-200">HTTP <code class="ic">301</code>/<code class="ic">302</code> redirect</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[13rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">HTTP <code class="ic">301</code>/<code class="ic">302</code> redirect</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2 round-trips</span>
         </div>
-        <div class="grid grid-cols-[9rem_1fr_7rem] sm:grid-cols-[13rem_1fr_8rem] items-center gap-3">
-          <span class="text-sm text-storm-200">In-memory <code class="ic">req.url</code> rewrite</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[13rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">In-memory <code class="ic">req.url</code> rewrite</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 round-trip</span>
         </div>
@@ -914,18 +914,18 @@ if (!parsed.success) return parsed.response;
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white"><code class="ic">POST /api/v1/auth/login</code> CPU time per attempt</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Unknown email (naive early return)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Unknown email (naive early return)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2 ms</span>
         </div>
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Known email (real PBKDF2)</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Known email (real PBKDF2)</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="45"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">45 ms</span>
         </div>
-        <div class="grid grid-cols-[10rem_1fr_4.5rem] sm:grid-cols-[15rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Unknown email + <code class="ic">DUMMY_PASSWORD_HASH</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Unknown email + <code class="ic">DUMMY_PASSWORD_HASH</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="45"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">45 ms</span>
         </div>

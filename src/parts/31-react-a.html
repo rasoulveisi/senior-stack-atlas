@@ -436,13 +436,13 @@ if (defaultValue !== seenUrlValue) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: DOM listener subscriptions across 10 keystrokes (inline arrow handler)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">[key, handler]</code> deps</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">[key, handler]</code> deps</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="10"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">10 binds</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 bind</span>
         </div>
@@ -659,13 +659,13 @@ export function LocalTime({ date }: { date: Date }) {
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Example: Components re-rendered per toast popup (app with 25 <code class="ic">useToast()</code> callers)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">toasts</code> in Context</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">toasts</code> in Context</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="25"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">25 renders</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Only <code class="ic">toast</code> fn</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Only <code class="ic">toast</code> fn</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 render</span>
         </div>
@@ -830,31 +830,31 @@ export function useToast(): ShowToast {
         <p class="text-sm font-semibold text-white">6-step <code class="ic">StatusControl</code> lifecycle · Success vs failure branch</p>
         <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
       </div>
-      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">01</p>
           <p class="font-semibold text-white">Select</p>
           <p class="text-xs text-storm-300">User picks <code class="ic">"in_progress"</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">02</p>
           <p class="font-semibold text-white">Transition</p>
           <p class="text-xs text-storm-300"><code class="ic">startTransition</code> sets <code class="ic">pending = true</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
           <p class="font-mono text-[11px] text-vivid-300">03</p>
           <p class="font-semibold text-white">Optimistic UI</p>
           <p class="text-xs text-storm-300"><code class="ic">setOptimisticStatus</code> shows it with zero delay.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
           <p class="font-mono text-[11px] text-storm-400">04</p>
           <p class="font-semibold text-white">Server Action</p>
           <p class="text-xs text-storm-300"><code class="ic">changeStatusAction</code> + <code class="ic">updateTag</code>.</p>
         </div>
-        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
         <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
           <p class="font-mono text-[11px] text-vivid-300">05 · if ok</p>
           <p class="font-semibold text-white">Streams new prop</p>

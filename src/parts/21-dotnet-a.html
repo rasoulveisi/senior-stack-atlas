@@ -570,13 +570,13 @@ var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();</code><
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">First user click: cold cloud Postgres connection vs pre-warmed pool</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Cold connection</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Cold connection</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="3000"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">2–3 s</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Warm pool</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Warm pool</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="40"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">40 ms</span>
         </div>
@@ -628,13 +628,13 @@ var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();</code><
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">6 independent read queries in <code class="ic">ApplicationService.GetByIdAsync</code> (database 40 ms away)</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">6 × 40 ms one by one</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">6 × 40 ms one by one</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="240"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">240 ms</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Parallel factory</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Parallel factory</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="40"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">~40 ms</span>
         </div>

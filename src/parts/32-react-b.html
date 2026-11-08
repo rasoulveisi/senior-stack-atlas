@@ -112,13 +112,13 @@
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">Two independent queries in <code class="ic">IssueListSection</code>: sequential waterfall vs <code class="ic">Promise.all</code></figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200">Sequential <code class="ic">await</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">Sequential <code class="ic">await</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">sum of both</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">Promise.all</code></span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">Promise.all</code></span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">slower only</span>
         </div>
@@ -298,13 +298,13 @@
     <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
       <figcaption class="text-sm font-semibold text-white">100 users viewing issue <code class="ic">WEB-1</code>: DB queries when <code class="ic">actor</code> is inside vs outside cache args</figcaption>
       <div data-chart class="mt-5 space-y-4">
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">actor</code> in cache args</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">actor</code> in cache args</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="100"></div></div>
           <span class="font-mono text-sm text-coral-300 text-right">100 queries</span>
         </div>
-        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
-          <span class="text-sm text-storm-200"><code class="ic">actor</code> outside</span>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_7rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">actor</code> outside</span>
           <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
           <span class="font-mono text-sm text-vivid-300 text-right">1 shared hit</span>
         </div>
