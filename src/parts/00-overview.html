@@ -1,0 +1,223 @@
+
+<!-- ===================== HERO ===================== -->
+<div id="start" data-toc-group="Start here">
+<section id="overview" data-toc="Welcome" class="relative overflow-hidden brand-glow border-b border-storm-700/70">
+  <div class="absolute inset-0 grid-dots opacity-70" aria-hidden="true"></div>
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 pb-20 md:pt-24 md:pb-28 grid lg:grid-cols-[1.15fr_1fr] gap-12 items-center">
+    <div class="reveal">
+      <p class="inline-flex items-center gap-2 rounded-full border border-vivid-400/40 bg-storm-900/60 px-3.5 py-1.5 text-xs font-medium text-vivid-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-vivid-400"></span> Visual interview guide · 3 real codebases
+      </p>
+      <h1 class="mt-6 text-5xl sm:text-6xl md:text-7xl font-semibold text-white leading-[1.02] tracking-tight">Senior<br>Stack <span class="text-transparent bg-clip-text bg-gradient-to-r from-vivid-300 to-vivid-100">Atlas</span></h1>
+      <p class="mt-6 text-lg md:text-xl font-light text-storm-100 max-w-xl leading-relaxed">Learn how senior engineers <mark class="hl">think</mark>: why the code looks the way it does, what breaks, and what to say in the interview. With pictures first and words second.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#module-express" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 font-semibold px-5 py-3 hover:bg-vivid-300 transition"><i data-lucide="play" class="w-4 h-4"></i> Start the journey</a>
+        <a href="#matrix" class="inline-flex items-center gap-2 rounded-xl border border-storm-500 text-white font-medium px-5 py-3 hover:border-vivid-400 transition"><i data-lucide="git-compare-arrows" class="w-4 h-4"></i> One problem, three stacks</a>
+      </div>
+    </div>
+
+    <figure class="reveal relative" aria-label="Three stacks around the same engineering problems">
+      <svg viewBox="0 0 520 470" class="w-full h-auto max-w-md mx-auto" role="img" font-family="Lexend, sans-serif">
+        <title>Express, .NET and React orbit the same core problems</title>
+        <circle cx="260" cy="235" r="200" fill="none" stroke="#1C3840" stroke-width="1.5" stroke-dasharray="4 8"/>
+        <circle cx="260" cy="235" r="135" fill="none" stroke="#2E464C" stroke-width="1.5"/>
+        <circle cx="260" cy="235" r="70" fill="none" stroke="#02EFF0" stroke-opacity=".25" stroke-width="1.5"/>
+        <g stroke="#02EFF0" stroke-opacity=".55" stroke-width="2">
+          <line x1="260" y1="235" x2="260" y2="60"/>
+          <line x1="260" y1="235" x2="98" y2="345"/>
+          <line x1="260" y1="235" x2="422" y2="345"/>
+        </g>
+        <circle cx="260" cy="235" r="58" fill="url(#g-orb)" filter="url(#glow)"/>
+        <text x="260" y="230" text-anchor="middle" fill="#0F282F" font-size="15" font-weight="700">same</text>
+        <text x="260" y="249" text-anchor="middle" fill="#0F282F" font-size="15" font-weight="700">problems</text>
+        <!-- Express -->
+        <g>
+          <circle cx="260" cy="60" r="44" fill="#0F282F" stroke="#02EFF0" stroke-width="2"/>
+          <text x="260" y="56" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Express 5</text>
+          <text x="260" y="75" text-anchor="middle" fill="#81F7F7" font-size="11">TypeScript</text>
+        </g>
+        <!-- .NET -->
+        <g>
+          <circle cx="98" cy="345" r="44" fill="#0F282F" stroke="#81F7F7" stroke-width="2"/>
+          <text x="98" y="341" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">.NET 10</text>
+          <text x="98" y="360" text-anchor="middle" fill="#81F7F7" font-size="11">C# · EF Core</text>
+        </g>
+        <!-- React -->
+        <g>
+          <circle cx="422" cy="345" r="44" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <text x="422" y="341" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">React 19</text>
+          <text x="422" y="360" text-anchor="middle" fill="#81F7F7" font-size="11">Next.js 16</text>
+        </g>
+        <!-- orbiting pillars -->
+        <g font-size="11" fill="#A5AFB1">
+          <text x="110" y="150">pipeline</text>
+          <text x="372" y="150">validation</text>
+          <text x="60" y="250">DI</text>
+          <text x="440" y="250">caching</text>
+          <text x="190" y="440">errors</text>
+          <text x="290" y="440">testing</text>
+        </g>
+        <g fill="#02EFF0">
+          <circle cx="160" cy="160" r="3.5"/><circle cx="360" cy="160" r="3.5"/><circle cx="76" cy="262" r="3.5"/>
+          <circle cx="436" cy="262" r="3.5"/><circle cx="224" cy="430" r="3.5"/><circle cx="296" cy="430" r="3.5"/>
+        </g>
+      </svg>
+    </figure>
+  </div>
+
+  <!-- stats -->
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-vivid-400">3</p><p class="mt-1 text-sm text-storm-200">real production codebases</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-white">29</p><p class="mt-1 text-sm text-storm-200">visual chapters</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-white" data-count-qa>50+</p><p class="mt-1 text-sm text-storm-200">interview answers, all open</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-vivid-400">8</p><p class="mt-1 text-sm text-storm-200">shared engineering pillars</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10">
+
+<!-- ===================== THE THREE CODEBASES ===================== -->
+<section id="codebases" data-toc="The three codebases" class="py-16 space-y-8">
+  <div class="reveal">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Where the examples come from</p>
+    <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">Three apps. Real code. No toy examples.</h2>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4">
+    <a href="#module-express" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-vivid-400 text-storm-900 grid place-items-center"><i data-lucide="activity" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 01</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">PhysioCoach AI</p>
+      <p class="mt-1 text-sm text-storm-300">An AI physiotherapy coach API that must never prescribe an unsafe exercise.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">Express 5</span><span class="chip">TypeScript</span><span class="chip">Cloudflare Workers</span><span class="chip">Hyperdrive</span><span class="chip">Drizzle</span><span class="chip">Neon</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">Open module <i data-lucide="arrow-right" class="w-4 h-4"></i></p>
+    </a>
+    <a href="#module-dotnet" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-vivid-200 text-storm-900 grid place-items-center"><i data-lucide="briefcase-business" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 02</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">Job Craft</p>
+      <p class="mt-1 text-sm text-storm-300">A job-application assistant that scans job boards and scores your fit.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">.NET 10</span><span class="chip">Minimal APIs</span><span class="chip">EF Core</span><span class="chip">pgvector</span><span class="chip">Channel&lt;T&gt;</span><span class="chip">Angular 20</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">Open module <i data-lucide="arrow-right" class="w-4 h-4"></i></p>
+    </a>
+    <a href="#module-react" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-white text-storm-900 grid place-items-center"><i data-lucide="atom" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 03</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">Next Issue Tracker</p>
+      <p class="mt-1 text-sm text-storm-300">An issue tracker built the modern way, explained for Angular developers.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">React 19</span><span class="chip">Next.js 16.4</span><span class="chip">React Compiler</span><span class="chip">Drizzle</span><span class="chip">PGlite</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">Open module <i data-lucide="arrow-right" class="w-4 h-4"></i></p>
+    </a>
+  </div>
+</section>
+
+<!-- ===================== VISUAL LANGUAGE ===================== -->
+<section id="how-to-read" data-toc="How to read this page" class="py-16 border-t border-storm-700/60 space-y-8">
+  <div class="reveal">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">How to read this page</p>
+    <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">Colours and shapes tell you what matters.</h2>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+      <p class="mt-2 text-sm text-storm-100">Cyan means: remember this.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-coral-300 font-semibold"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap</p>
+      <p class="mt-2 text-sm text-storm-100">Coral means: this breaks in production.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-white text-storm-900 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-700 font-semibold"><i data-lucide="sun" class="w-4 h-4"></i> Real world</p>
+      <p class="mt-2 text-sm font-medium">White cards compare code to everyday life.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview</p>
+      <p class="mt-2 text-sm text-storm-100">The question and the full answer. Nothing hidden.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-white font-semibold"><i data-lucide="play" class="w-4 h-4 text-vivid-400"></i> Play</p>
+      <p class="mt-2 text-sm text-storm-100">Flows light up step by step. Press Play to watch again.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CROSS-STACK MATRIX ===================== -->
+<script>
+window.MATRIX = [
+  { short: 'Architecture', icon: 'layout-grid', title: 'Architecture style', question: 'Where does the code for one feature live?', stacks: [
+    { head: 'Direct and flat', body: 'Routes call services and run Drizzle queries directly. <strong class="text-white">No repository layers</strong> that hide joins.' },
+    { head: 'Vertical slices', body: 'One folder per feature: <code class="ic">Endpoints.cs</code>, <code class="ic">Models.cs</code>, <code class="ic">Service.cs</code>, plus pure static rules in <code class="ic">Domain/</code>.' },
+    { head: 'Feature folders + DAL', body: 'App Router pages, and a Data Access Layer per feature: <code class="ic">queries.ts</code>, <code class="ic">mutations.ts</code>, <code class="ic">actions.ts</code>.' } ] },
+  { short: 'Pipeline', icon: 'workflow', title: 'Request pipeline', question: 'What does a request pass through before your code runs?', stacks: [
+    { head: 'Ordered array', body: 'Middleware functions <code class="ic">(req, res, next)</code> run in order. <strong class="text-white">Order is architecture.</strong>' },
+    { head: 'Russian doll', body: '<code class="ic">UseExceptionHandler</code> wraps everything, then CORS, auth, and finally the endpoints.' },
+    { head: 'Proxy → layouts → Suspense', body: '<code class="ic">proxy.ts</code>, then nested layouts, then <code class="ic">&lt;Suspense&gt;</code> boundaries around Server Components and Actions.' } ] },
+  { short: 'DI', icon: 'plug', title: 'Dependency injection', question: 'How does code get its database and services?', stacks: [
+    { head: 'Lazy per request', body: '<code class="ic">c.get(\'db\')</code> on the custom <code class="ic">ExpressRouteContext</code> creates the client only when a route needs it.' },
+    { head: 'Built-in container', body: '<code class="ic">Singleton</code>, <code class="ic">Scoped</code>, <code class="ic">Transient</code>, and <code class="ic">IServiceScopeFactory</code> for background work.' },
+    { head: 'Module boundaries', body: '<code class="ic">import "server-only"</code> keeps server code out of the browser. <code class="ic">React.cache()</code> shares a value inside one request.' } ] },
+  { short: 'Validation', icon: 'shield-check', title: 'Validation and security', question: 'How is untrusted input stopped?', stacks: [
+    { head: 'Zero-trust gate', body: 'Zod <code class="ic">.strict()</code> schemas at the route boundary reject unknown fields with <code class="ic">400</code>.' },
+    { head: 'Records + guards', body: 'Record DTO validation and pure static C# domain guards.' },
+    { head: 'Validate every action', body: 'Zod <code class="ic">safeParse</code> in Server Actions, <strong class="text-white">bound arguments too</strong>, plus <code class="ic">actor</code> permission checks in the DAL.' } ] },
+  { short: 'Database', icon: 'database-zap', title: 'Database performance', question: 'How is the database kept fast?', stacks: [
+    { head: 'Pooler at the edge', body: 'Cloudflare Hyperdrive + <code class="ic">postgres.js</code> with <code class="ic">prepare: false</code> and <code class="ic">fetch_types: false</code>.' },
+    { head: 'Warm pool, parallel reads', body: '<code class="ic">NpgsqlDataSource</code> warmed with <code class="ic">MinPoolSize = 8</code>, <code class="ic">AsNoTracking()</code>, parallel queries via <code class="ic">IDbContextFactory</code>.' },
+    { head: 'Shared cache, private rights', body: 'Shared <code class="ic">"use cache"</code> queries, per-user permission checks outside the cache, <code class="ic">updateTag()</code> on writes.' } ] },
+  { short: 'Errors', icon: 'file-warning', title: 'Error contract', question: 'What does the client receive when something fails?', stacks: [
+    { head: 'RFC 7807 handler', body: 'A 4-argument <code class="ic">errorHandler</code> returns <code class="ic">application/problem+json</code>.' },
+    { head: 'ProblemDetails', body: '<code class="ic">AddProblemDetails()</code> + <code class="ic">Results.Problem()</code> return RFC 7807 JSON.' },
+    { head: 'Values + small boundaries', body: 'Expected errors come back as <code class="ic">FormState</code> values. Crashes stay inside a <code class="ic">SectionError</code> box.' } ] },
+  { short: 'AI resilience', icon: 'bot', title: 'External AI resilience', question: 'What happens when the AI is slow or wrong?', stacks: [
+    { head: 'Fence the model', body: 'Pre-filtered safe candidates, timeout + fallback models, a deterministic clinical validator, and audit logs.' },
+    { head: 'Rules first, AI on top', body: '<code class="ic">IHttpClientFactory</code>, a linked 25 s timeout, SHA-256 embedding dedup, and a deterministic C# fallback.' },
+    { head: 'Optimistic UI', body: '<code class="ic">useOptimistic</code> shows the result at once and <strong class="text-white">rolls back automatically</strong> if the action fails.' } ] },
+  { short: 'Testing', icon: 'flask-conical', title: 'Integration testing', question: 'How is the real system tested without mocking the world?', stacks: [
+    { head: 'Port 0 bridge', body: '<code class="ic">server.listen(0, \'127.0.0.1\')</code> gives every test its own free port, plus a <code class="ic">.fetch()</code> bridge.' },
+    { head: 'Real pipeline', body: '<code class="ic">WebApplicationFactory&lt;Program&gt;</code> + a Neon test branch + <code class="ic">ThrowingAiClient</code> fault injection.' },
+    { head: 'Real Postgres in WASM', body: 'PGlite for DB and action tests, Playwright against <code class="ic">next build &amp;&amp; next start</code>.' } ] }
+];
+</script>
+
+<section id="matrix" data-toc="One problem, three stacks" class="py-16 border-t border-storm-700/60 space-y-8">
+  <div class="reveal grid md:grid-cols-[1fr_auto] gap-6 items-end">
+    <div>
+      <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Cross-stack engineering map</p>
+      <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">One problem, three stacks</h2>
+      <p class="mt-3 text-storm-200 max-w-2xl">Senior engineers see the same eight problems in every stack. Pick a problem and compare the answers.</p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-storm-300"><i data-lucide="mouse-pointer-click" class="w-4 h-4 text-vivid-400"></i> Tap a pillar</div>
+  </div>
+
+  <div id="matrix-app" class="reveal rounded-3xl border border-storm-700 bg-storm-900/80 p-4 md:p-6">
+    <div data-matrix-tabs role="tablist" class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1"></div>
+    <div data-matrix-panel class="mt-5">
+      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h3 data-pillar-title class="text-2xl md:text-3xl font-semibold text-white"></h3>
+        <p data-pillar-q class="text-storm-300"></p>
+      </div>
+      <div class="mt-5 grid md:grid-cols-3 gap-4">
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-vivid-400"><i data-lucide="zap" class="w-4 h-4"></i> Express 5</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-vivid-200"><i data-lucide="layers" class="w-4 h-4"></i> .NET 10</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-white"><i data-lucide="atom" class="w-4 h-4"></i> React + Next</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+    <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+    <p class="mt-2 text-lg md:text-xl text-white font-medium">In a system design interview, name the <em>problem</em> first, then the tool. "We needed a fail-closed boundary, so we used…" sounds senior. "We used Zod" does not.</p>
+  </div>
+</section>
+</div>
+</div>

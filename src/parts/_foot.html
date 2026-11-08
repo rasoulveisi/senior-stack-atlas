@@ -1,0 +1,216 @@
+
+<footer class="mt-24 border-t border-storm-700/70">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-14 grid gap-8 md:grid-cols-[1fr_auto] items-end">
+    <div>
+      <div class="h-1 w-24 rounded-full brand-line"></div>
+      <p class="mt-5 text-2xl font-semibold text-white">Explain the why, not only the what.</p>
+      <p class="mt-2 text-storm-300 max-w-xl">Every chapter here comes from real production code: PhysioCoach AI, Job Craft and Next Issue Tracker.</p>
+    </div>
+    <a href="#top" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 font-semibold px-5 py-3 hover:bg-vivid-300">
+      <i data-lucide="arrow-up" class="w-4 h-4"></i> Back to top
+    </a>
+  </div>
+</footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- icons ---------- */
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+
+  /* ---------- code blocks: chrome, highlight, line numbers, marked lines, copy ---------- */
+  var LANGS = { ts: 'typescript', tsx: 'typescript', js: 'javascript', cs: 'csharp', csharp: 'csharp', sql: 'sql', json: 'json', bash: 'bash', text: 'plaintext', http: 'plaintext' };
+  function parseRanges(s) {
+    var set = {};
+    (s || '').split(',').forEach(function (p) {
+      p = p.trim(); if (!p) return;
+      var m = p.split('-'); var a = parseInt(m[0], 10), b = parseInt(m[1] || m[0], 10);
+      for (var i = a; i <= b; i++) set[i] = true;
+    });
+    return set;
+  }
+  function splitLines(html) {
+    var out = [], line = '', stack = [], re = /(<[^>]+>)|([^<]+)/g, m;
+    while ((m = re.exec(html))) {
+      if (m[1]) {
+        var tag = m[1];
+        if (tag.charAt(1) === '/') stack.pop(); else if (!/\/>$/.test(tag)) stack.push(tag);
+        line += tag;
+      } else {
+        var parts = m[2].split('\n');
+        for (var i = 0; i < parts.length; i++) {
+          if (i > 0) { line += new Array(stack.length + 1).join('</span>'); out.push(line); line = stack.join(''); }
+          line += parts[i];
+        }
+      }
+    }
+    out.push(line);
+    while (out.length && /^(<[^>]+>)*\s*(<\/[^>]+>)*$/.test(out[out.length - 1]) && out[out.length - 1].replace(/<[^>]+>/g, '').trim() === '') out.pop();
+    while (out.length && out[0].replace(/<[^>]+>/g, '').trim() === '' && !/\S/.test(out[0].replace(/<[^>]+>/g, ''))) { if (out.length > 1) out.shift(); else break; }
+    return out;
+  }
+  document.querySelectorAll('pre[data-file]').forEach(function (pre) {
+    var code = pre.querySelector('code') || pre;
+    var raw = code.textContent.replace(/^\n+|\s+$/g, '');
+    code.textContent = raw;
+    var lang = (pre.getAttribute('data-lang') || '').toLowerCase();
+    var hlName = LANGS[lang] || lang || 'plaintext';
+    if (window.hljs && hlName !== 'plaintext' && hljs.getLanguage(hlName)) {
+      try { code.innerHTML = hljs.highlight(raw, { language: hlName, ignoreIllegals: true }).value; } catch (e) {}
+    }
+    var marks = parseRanges(pre.getAttribute('data-hl'));
+    code.innerHTML = splitLines(code.innerHTML).map(function (l, i) {
+      return '<span class="ln' + (marks[i + 1] ? ' hl' : '') + '">' + (l === '' ? ' ' : l) + '</span>';
+    }).join('');
+    var card = document.createElement('div'); card.className = 'code-card';
+    var head = document.createElement('header');
+    head.innerHTML = '<span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="file"></span><span class="lang"></span><button type="button">Copy</button>';
+    head.querySelector('.file').textContent = pre.getAttribute('data-file');
+    head.querySelector('.lang').textContent = lang || 'code';
+    head.querySelector('button').addEventListener('click', function (ev) {
+      var b = ev.currentTarget;
+      var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(raw).then(done, done); else done();
+    });
+    pre.parentNode.insertBefore(card, pre); card.appendChild(head); card.appendChild(pre);
+  });
+
+  /* ---------- table of contents + scroll spy ---------- */
+  var tocNav = document.getElementById('toc-nav');
+  var links = [];
+  document.querySelectorAll('[data-toc-group]').forEach(function (group) {
+    var wrap = document.createElement('div');
+    var h = document.createElement('a');
+    h.href = '#' + group.id;
+    h.className = 'flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-[.16em] text-vivid-400 hover:text-vivid-200';
+    h.textContent = group.getAttribute('data-toc-group');
+    wrap.appendChild(h);
+    var list = document.createElement('div'); list.className = 'mt-2 space-y-0.5';
+    group.querySelectorAll('[data-toc]').forEach(function (sec) {
+      var a = document.createElement('a');
+      a.href = '#' + sec.id; a.className = 'toc-link'; a.textContent = sec.getAttribute('data-toc');
+      list.appendChild(a); links.push({ a: a, sec: sec });
+    });
+    wrap.appendChild(list); tocNav.appendChild(wrap);
+  });
+  var toc = document.getElementById('toc'), scrim = document.getElementById('toc-scrim'), toggle = document.getElementById('toc-toggle');
+  function setToc(open) {
+    toc.classList.toggle('open', open); scrim.classList.toggle('hidden', !open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  toggle.addEventListener('click', function () { setToc(!toc.classList.contains('open')); });
+  scrim.addEventListener('click', function () { setToc(false); });
+  tocNav.addEventListener('click', function (e) { if (e.target.closest('a')) setToc(false); });
+  if ('IntersectionObserver' in window && links.length) {
+    var current = null;
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var hit = links.filter(function (l) { return l.sec === en.target; })[0];
+        if (!hit || hit === current) return;
+        if (current) current.a.classList.remove('is-active');
+        hit.a.classList.add('is-active'); current = hit;
+        var r = hit.a.getBoundingClientRect(), tr = toc.getBoundingClientRect();
+        if (r.top < tr.top + 40 || r.bottom > tr.bottom - 40) toc.scrollTop += r.top - tr.top - tr.height / 3;
+      });
+    }, { rootMargin: '-25% 0px -65% 0px' });
+    links.forEach(function (l) { spy.observe(l.sec); });
+  }
+
+  /* ---------- reading progress ---------- */
+  var bar = document.getElementById('progress');
+  function onScroll() {
+    var h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  /* ---------- charts: <div data-chart [data-max]> ... <div class="bar" data-value="240"> ---------- */
+  function fillChart(chart) {
+    var bars = chart.querySelectorAll('.bar[data-value]');
+    var max = parseFloat(chart.getAttribute('data-max')) || 0;
+    bars.forEach(function (b) { max = Math.max(max, parseFloat(b.getAttribute('data-value')) || 0); });
+    bars.forEach(function (b) {
+      var v = parseFloat(b.getAttribute('data-value')) || 0;
+      b.style.width = Math.max(v > 0 ? 2 : 0, (v / (max || 1)) * 100) + '%';
+    });
+  }
+
+  /* ---------- steppers: <div data-stepper> <button data-play> ... .step ---------- */
+  function runStepper(box) {
+    if (box._running) return; box._running = true;
+    var steps = box.querySelectorAll('.step'), i = 0;
+    steps.forEach(function (s) { s.classList.remove('is-on'); });
+    (function next() {
+      if (i > 0) steps[i - 1].classList.remove('is-on');
+      if (i >= steps.length) { box._running = false; return; }
+      steps[i].classList.add('is-on'); i++;
+      setTimeout(next, 950);
+    })();
+  }
+  document.querySelectorAll('[data-stepper]').forEach(function (box) {
+    var btn = box.querySelector('[data-play]');
+    if (btn) btn.addEventListener('click', function () { runStepper(box); });
+  });
+
+  /* ---------- reveal on scroll, charts and steppers start when visible ---------- */
+  var watch = document.querySelectorAll('.reveal, [data-chart], [data-stepper]');
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var el = en.target;
+        if (el.classList.contains('reveal')) el.classList.add('in');
+        if (el.hasAttribute('data-chart')) fillChart(el);
+        if (el.hasAttribute('data-stepper') && !el._played) { el._played = true; runStepper(el); }
+        io.unobserve(el);
+      });
+    }, { threshold: 0.18 });
+    watch.forEach(function (el) { io.observe(el); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+    document.querySelectorAll('[data-chart]').forEach(fillChart);
+  }
+
+  /* ---------- cross-stack matrix switcher ---------- */
+  var matrix = document.getElementById('matrix-app');
+  if (matrix && window.MATRIX) {
+    var tabs = matrix.querySelector('[data-matrix-tabs]'), panel = matrix.querySelector('[data-matrix-panel]');
+    function show(idx) {
+      var p = window.MATRIX[idx];
+      tabs.querySelectorAll('button').forEach(function (b, j) {
+        b.setAttribute('aria-selected', j === idx ? 'true' : 'false');
+        b.classList.toggle('bg-vivid-400', j === idx); b.classList.toggle('text-storm-900', j === idx);
+        b.classList.toggle('border-vivid-400', j === idx); b.classList.toggle('text-storm-100', j !== idx);
+      });
+      panel.querySelector('[data-pillar-title]').textContent = p.title;
+      panel.querySelector('[data-pillar-q]').textContent = p.question;
+      var cols = panel.querySelectorAll('[data-stack]');
+      cols.forEach(function (c, k) {
+        var item = p.stacks[k];
+        c.querySelector('[data-stack-head]').textContent = item.head;
+        c.querySelector('[data-stack-body]').innerHTML = item.body;
+        c.classList.remove('in'); void c.offsetWidth; c.classList.add('in');
+      });
+    }
+    window.MATRIX.forEach(function (p, idx) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role', 'tab');
+      b.className = 'shrink-0 inline-flex items-center gap-2 rounded-xl border border-storm-600 px-3.5 py-2 text-sm font-medium transition hover:border-vivid-400';
+      b.innerHTML = '<i data-lucide="' + p.icon + '" class="w-4 h-4"></i><span></span>';
+      b.querySelector('span').textContent = p.short;
+      b.addEventListener('click', function () { show(idx); });
+      tabs.appendChild(b);
+    });
+    try { lucide.createIcons(); } catch (e) {}
+    show(0);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,826 @@
+<section id="rx-05" data-toc="3.5 Streaming &amp; errors" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.5</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Async Params · cacheComponents · Suspense · Error Boundaries</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">App Router, streaming and error boundaries</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Next.js 16 prerenders a <mark class="hl">static outer shell</mark> at build time and streams dynamic request holes through <code class="ic">&lt;Suspense&gt;</code>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A restaurant brings bread and water to your table at once while the main dish cooks in the kitchen.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Async params, searchParams and cacheComponents</h4>
+    <p class="text-storm-200 max-w-3xl">In Next.js 15 and 16+, route <code class="ic">params</code> and <code class="ic">searchParams</code> are Promises. You do not read <code class="ic">params.projectKey</code> synchronously; you <code class="ic">await params</code> inside a <code class="ic">&lt;Suspense&gt;</code> boundary.</p>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium"><code class="ic">params</code> and <code class="ic">searchParams</code> are Promises. <code class="ic">ProjectPage</code> stays synchronous and passes the un-awaited Promises into <code class="ic">&lt;ProjectContent&gt;</code> inside <code class="ic">&lt;Suspense&gt;</code>.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app/(app)/projects/[projectKey]/page.tsx" data-lang="ts" data-hl="1-4,7-9"><code>export default function ProjectPage({
+  params,
+  searchParams,
+}: PageProps&lt;"/projects/[projectKey]"&gt;) {
+  return (
+    &lt;main className="flex flex-col gap-6"&gt;
+      &lt;Suspense fallback={&lt;ProjectPageSkeleton /&gt;}&gt;
+        &lt;ProjectContent params={params} searchParams={searchParams} /&gt;
+      &lt;/Suspense&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">ProjectPage</code> is synchronous because <code class="ic">cacheComponents: true</code> is enabled in <code class="ic">next.config.ts</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Any request-time work (reading <code class="ic">params</code>, <code class="ic">searchParams</code>, <code class="ic">headers()</code>, <code class="ic">cookies()</code>, or uncached DB reads) must sit inside a <code class="ic">&lt;Suspense&gt;</code> boundary.</span></li>
+      </ul>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 250" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Prerendered static outer shell built at build time with a request-time Suspense hole filled later under cacheComponents: true</title>
+          <rect x="14" y="20" width="320" height="210" rx="18" fill="#153139" stroke="#2E464C"/>
+          <text x="174" y="48" text-anchor="middle" fill="#81F7F7" font-size="14" font-weight="600">Build Time (cacheComponents: true)</text>
+          <rect x="34" y="64" width="280" height="146" rx="14" fill="#0F282F" stroke="#2E464C"/>
+          <text x="54" y="92" fill="#FFFFFF" font-size="14" font-weight="600">&lt;main className="flex ..."&gt;</text>
+          <rect x="54" y="106" width="240" height="86" rx="10" fill="#153139" stroke="#02EFF0" stroke-dasharray="6 4"/>
+          <text x="174" y="136" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">&lt;Suspense&gt; static fallback</text>
+          <text x="174" y="158" text-anchor="middle" fill="#879497" font-size="13">&lt;ProjectPageSkeleton /&gt;</text>
+          <text x="174" y="178" text-anchor="middle" fill="#81F7F7" font-size="13">prerendered shell flushes at once</text>
+
+          <line x1="334" y1="125" x2="396" y2="125" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="365" y="112" text-anchor="middle" fill="#02EFF0" font-size="13">streams</text>
+
+          <rect x="406" y="20" width="320" height="210" rx="18" fill="#153139" stroke="#02EFF0"/>
+          <text x="566" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Request Time (&lt;Suspense&gt; hole)</text>
+          <rect x="426" y="64" width="280" height="146" rx="14" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="566" y="92" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">&lt;ProjectContent /&gt;</text>
+          <text x="566" y="118" text-anchor="middle" fill="#81F7F7" font-size="13">await params &amp; await searchParams</text>
+          <text x="566" y="142" text-anchor="middle" fill="#879497" font-size="13">headers() · cookies() · DB reads</text>
+          <rect x="448" y="158" width="236" height="36" rx="8" fill="#153139" stroke="#02EFF0"/>
+          <text x="566" y="181" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">replaces skeleton in DOM</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Under <code class="ic">cacheComponents: true</code>, Next.js prerenders <code class="ic">&lt;main&gt;</code> and <code class="ic">&lt;ProjectPageSkeleton /&gt;</code> at build time and fills the <code class="ic">&lt;Suspense&gt;</code> hole at request time.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Nested &lt;Suspense&gt; streaming vs request waterfalls</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">ProjectContent</code> awaits the project header (<code class="ic">getProjectByKey</code>) and immediately renders <code class="ic">&lt;header&gt;</code> plus a nested <code class="ic">&lt;Suspense fallback={&lt;IssueListSkeleton /&gt;}&gt;</code> wrapping <code class="ic">&lt;IssueListSection&gt;</code>.</p>
+
+    <ol class="reveal relative border-l-2 border-storm-600 ml-3 space-y-6">
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+        <p class="font-semibold text-white">Static outer shell arrives first</p>
+        <p class="text-sm text-storm-300">Browser paints <code class="ic">&lt;main&gt;</code> and <code class="ic">&lt;ProjectPageSkeleton /&gt;</code> immediately.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+        <p class="font-semibold text-white">Project header and "New issue" button paint next</p>
+        <p class="text-sm text-storm-300"><code class="ic">getProjectByKey</code> finishes; the browser renders the project title and "New issue" button while <code class="ic">&lt;IssueListSkeleton /&gt;</code> holds the table slot.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+        <p class="font-semibold text-white">Filtered issue table streams in last</p>
+        <p class="text-sm text-storm-300"><code class="ic">IssueListSection</code> resolves <code class="ic">listIssues</code> and <code class="ic">listAssignableUsers</code> in parallel and swaps out <code class="ic">&lt;IssueListSkeleton /&gt;</code>.</p>
+      </li>
+    </ol>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Waterfall: one <code class="ic">await</code> after another</p>
+        <p class="mt-3 text-storm-200"><code class="ic">await listIssues(...)</code> finishes first. Only then does <code class="ic">await listAssignableUsers(...)</code> start.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ you wait for the sum of both queries</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Parallel: <code class="ic">Promise.all</code></p>
+        <p class="mt-3 text-storm-200">Both queries start together. For Angular developers: it works just like RxJS <code class="ic">forkJoin</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ you wait only for the slower query</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">Two independent queries in <code class="ic">IssueListSection</code>: sequential waterfall vs <code class="ic">Promise.all</code></figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
+          <span class="text-sm text-storm-200">Sequential <code class="ic">await</code></span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">sum of both</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">Promise.all</code></span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">slower only</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">Awaiting one query after the other creates a request waterfall (total time = query 1 + query 2). <code class="ic">Promise.all</code> waits only for the slower query.</p>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app/(app)/projects/[projectKey]/page.tsx" data-lang="ts" data-hl="1-4"><code>const [page, users] = await Promise.all([
+  listIssues(user, project.id, toIssueFilter(search)),
+  listAssignableUsers(user),
+]);</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">Both queries start at the same instant inside <code class="ic">IssueListSection</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Writing <code class="ic">await listIssues(...)</code> and then <code class="ic">await listAssignableUsers(...)</code> would block the second query until the first finishes.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Granular error boundaries (SectionError vs error.tsx)</h4>
+    <p class="text-storm-200 max-w-3xl">If <code class="ic">listComments</code> throws a database error, a page-level <code class="ic">error.tsx</code> would wipe out the entire Issue page. Wrapping <code class="ic">&lt;Comments&gt;</code> in <code class="ic">SectionError</code> (built with Next's <code class="ic">catchError()</code>) isolates the crash to the comments box.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 250" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>IssuePage where the issue header and StatusControl keep working while only the Comments box shows SectionError with a Try again button</title>
+          <rect x="16" y="16" width="688" height="218" rx="18" fill="#0F282F" stroke="#2E464C"/>
+          <text x="36" y="44" fill="#FFFFFF" font-size="15" font-weight="600">IssuePage (/projects/WEB/issues/1) · requireUser() &amp; notFound() ran before streaming</text>
+
+          <rect x="36" y="58" width="648" height="68" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="56" y="85" fill="#FFFFFF" font-size="14" font-weight="600">Issue Title &amp; Description</text>
+          <text x="56" y="108" fill="#81F7F7" font-size="13">Still interactive · healthy</text>
+          <rect x="504" y="72" width="160" height="40" rx="8" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="584" y="97" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">StatusControl ✓</text>
+
+          <rect x="36" y="140" width="648" height="78" rx="12" fill="#153139" stroke="#FF7A6B" stroke-width="2"/>
+          <text x="56" y="168" fill="#FF7A6B" font-size="14" font-weight="600">SectionError (catchError()) · Comments failed to load</text>
+          <text x="56" y="194" fill="#879497" font-size="13">listComments DB error isolated to this box only</text>
+          <rect x="524" y="158" width="140" height="42" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="594" y="184" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">Try again (retry)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">SectionError</code> catches the <code class="ic">Comments</code> failure locally and offers a "Try again" button (<code class="ic">retry()</code>), leaving the issue title, description, and status control working.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app/(app)/projects/[projectKey]/issues/[number]/page.tsx" data-lang="ts" data-hl="1,3"><code>&lt;SectionError title="Comments"&gt;
+  &lt;Suspense fallback={&lt;CommentsSkeleton /&gt;}&gt;
+    &lt;Comments user={user} issueId={issue.id} /&gt;
+  &lt;/Suspense&gt;
+&lt;/SectionError&gt;</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">SectionError</code> wraps the inner <code class="ic">&lt;Suspense&gt;</code> boundary so a database crash in <code class="ic">Comments</code> never reaches <code class="ic">error.tsx</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">requireUser()</code> and <code class="ic">notFound()</code> in <code class="ic">IssuePage</code> run <em>before</em> this boundary starts streaming.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> <code class="ic">notFound()</code> inside a streamed boundary</p>
+        <p class="mt-3 text-storm-200">Once the outer <code class="ic">&lt;Suspense&gt;</code> shell flushes to the browser, HTTP headers (<code class="ic">200 OK</code>) are already sent. Next.js swaps in <code class="ic">not-found.tsx</code> UI and injects <code class="ic">&lt;meta name="robots" content="noindex"&gt;</code>.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ HTTP status stays 200 OK + noindex meta</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> <code class="ic">notFound()</code> before streaming starts</p>
+        <p class="mt-3 text-storm-200">When <code class="ic">notFound()</code> runs before the outer shell flushes (or outside an inner streamed boundary), headers have not been sent yet.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ real HTTP 404 status code</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">What happens to the HTTP status code when <code class="ic">notFound()</code> or <code class="ic">forbidden()</code> is called inside a streamed <code class="ic">&lt;Suspense&gt;</code> boundary vs. before streaming starts?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Inside a streamed boundary:</strong> Once the outer shell (<code class="ic">&lt;Suspense&gt;</code> fallback) flushes to the client, the HTTP headers are already sent with status <code class="ic">200 OK</code>. When <code class="ic">notFound()</code> throws inside the streamed child later, Next.js swaps the fallback in the DOM with the <code class="ic">not-found.tsx</code> UI. It also injects <code class="ic">&lt;meta name="robots" content="noindex"&gt;</code>, while the HTTP status code stays <code class="ic">200</code>.</p>
+        <p><strong class="text-vivid-300">Before streaming starts:</strong> If <code class="ic">notFound()</code> runs before the shell flushes, Next.js returns an actual <code class="ic">404</code> HTTP status code.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why do we use <code class="ic">import "server-only"</code> at the top of <code class="ic">queries.ts</code>, <code class="ic">mutations.ts</code>, and <code class="ic">session.ts</code>?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Build-time boundary protection:</strong> If a developer imports a database query module inside a <code class="ic">"use client"</code> file, Next.js fails the build immediately with a clear error.</p>
+        <p>This prevents bundling server code, database drivers, or environment secrets into the browser JavaScript bundle.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-06" data-toc="3.6 DAL &amp; use cache" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.6</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">DAL · "use cache" · React.cache · updateTag</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">DAL and caching</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Cache shared raw data across all users with <code class="ic">"use cache"</code>, and compute <mark class="hl">per-user permissions outside</mark> the cache.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A restaurant prints one shared menu for all guests, while the waiter checks each guest's allergies personally.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The Data Access Layer (DAL) pattern</h4>
+    <p class="text-storm-200 max-w-3xl">Every query and mutation in <code class="ic">src/features/*/</code> (<code class="ic">docs/adr/0009-data-access-layer.md</code>) enforces three strict rules.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="ban" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Never import <code class="ic">db</code> in UI</p>
+        <p class="mt-1 text-sm text-storm-300">React components never import <code class="ic">db</code> or Drizzle schemas directly.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">actor: Actor</code> comes first</p>
+        <p class="mt-1 text-sm text-storm-300">Every query and mutation takes <code class="ic">actor: Actor</code> as its first parameter.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="circle-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Return DTOs with <code class="ic">viewerCan</code></p>
+        <p class="mt-1 text-sm text-storm-300">Queries return clean DTOs with <code class="ic">viewerCan: { edit, delete }</code> computed via pure functions in <code class="ic">permissions.ts</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">How Next.js 16.4 "use cache" works (and why actor stays outside)</h4>
+    <p class="text-storm-200 max-w-3xl">In a <code class="ic">"use cache"</code> function, Next.js automatically builds the cache key from the serialized arguments passed to the function (<code class="ic">projectKey</code>, <code class="ic">issueNumber</code>).</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>getIssue(actor, projectKey, issueNumber) calls cachedIssue(projectKey, issueNumber) in the shared cache box and computes viewerCan outside per user</title>
+          <rect x="14" y="30" width="210" height="180" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="119" y="60" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">getIssue(actor, ...)</text>
+          <text x="119" y="84" text-anchor="middle" fill="#879497" font-size="13">1. receives actor per user</text>
+          <rect x="30" y="102" width="178" height="42" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="119" y="128" text-anchor="middle" fill="#81F7F7" font-size="13">projectKey.toUpperCase()</text>
+          <text x="119" y="172" text-anchor="middle" fill="#879497" font-size="13">keeps actor out of args</text>
+
+          <line x1="224" y1="120" x2="262" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="270" y="24" width="220" height="192" rx="18" fill="#0F282F" stroke="#02EFF0" stroke-width="2"/>
+          <text x="380" y="54" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">cachedIssue(key, num)</text>
+          <text x="380" y="78" text-anchor="middle" fill="#81F7F7" font-size="13">"use cache" · shared box</text>
+          <rect x="290" y="94" width="180" height="36" rx="8" fill="#153139" stroke="#2E464C"/>
+          <text x="380" y="117" text-anchor="middle" fill="#FFFFFF" font-size="13">cacheLife("tracker")</text>
+          <rect x="290" y="140" width="180" height="36" rx="8" fill="#153139" stroke="#2E464C"/>
+          <text x="380" y="163" text-anchor="middle" fill="#FFFFFF" font-size="13">cacheTag(issue(row.id))</text>
+          <text x="380" y="198" text-anchor="middle" fill="#879497" font-size="13">1 DB hit for all users</text>
+
+          <line x1="490" y1="120" x2="528" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="536" y="30" width="190" height="180" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="631" y="60" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Outside cache</text>
+          <text x="631" y="84" text-anchor="middle" fill="#81F7F7" font-size="13">per-user DTO in getIssue</text>
+          <rect x="552" y="102" width="158" height="84" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="631" y="128" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">viewerCan: {</text>
+          <text x="631" y="148" text-anchor="middle" fill="#FFFFFF" font-size="13">edit: can.editIssue(...)</text>
+          <text x="631" y="168" text-anchor="middle" fill="#FFFFFF" font-size="13">delete: can.deleteIssue</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">cachedIssue</code> caches the shared row by <code class="ic">(projectKey, issueNumber)</code>. <code class="ic">getIssue</code> computes <code class="ic">viewerCan</code> outside the cache for each <code class="ic">actor</code>.</figcaption>
+    </figure>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">100 users viewing issue <code class="ic">WEB-1</code>: DB queries when <code class="ic">actor</code> is inside vs outside cache args</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">actor</code> in cache args</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="100"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">100 queries</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_5.5rem] sm:grid-cols-[12rem_1fr_7rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">actor</code> outside</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">1 shared hit</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">Passing <code class="ic">actor</code> into <code class="ic">cachedIssue</code> gives every user a separate cache key (100 DB queries instead of 1 shared cache hit).</p>
+    </figure>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap · Security bug</p>
+      <p class="mt-2 text-white font-semibold">Computing <code class="ic">viewerCan</code> inside <code class="ic">"use cache"</code> without passing <code class="ic">actor</code></p>
+      <p class="mt-1 text-sm text-storm-200">User B receives User A's cached <code class="ic">viewerCan</code> permissions! Always cache raw shared data and compute <code class="ic">viewerCan</code> outside <code class="ic">"use cache"</code>.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/queries.ts" data-lang="ts" data-hl="6,14-17,25-26,28"><code>export async function getIssue(
+  actor: Actor,
+  projectKey: string,
+  issueNumber: number,
+): Promise&lt;IssueDetail | null&gt; {
+  const row = await cachedIssue(projectKey.toUpperCase(), issueNumber);
+  if (!row) return null;
+
+  // viewerCan depends on WHO is asking, so it is computed here, outside the
+  // cache. The cached part is the same for everyone.
+  const { reporterId, assigneeId, ...issue } = row;
+  return {
+    ...issue,
+    viewerCan: {
+      edit: can.editIssue(actor, { reporterId, assigneeId }),
+      delete: can.deleteIssue(actor, { reporterId }),
+    },
+  };
+}
+
+async function cachedIssue(
+  projectKey: string,
+  issueNumber: number,
+): Promise&lt;CachedIssue | null&gt; {
+  "use cache";
+  cacheLife("tracker");
+  // ... DB query ...
+  cacheTag(cacheTags.issue(row.id));
+  return { ... };
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">cachedIssue</code> caches the raw row by <code class="ic">projectKey</code> and <code class="ic">issueNumber</code> and tags it with <code class="ic">cacheTags.issue(row.id)</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">getIssue</code> strips <code class="ic">reporterId</code> and <code class="ic">assigneeId</code> and calculates <code class="ic">viewerCan</code> for the current <code class="ic">actor</code>.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea · Normalize cache arguments</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">In <code class="ic">listIssues</code>, convert <code class="ic">undefined</code> and <code class="ic">null</code> into explicit strings (<code class="ic">"any"</code>, <code class="ic">"none"</code>) and call <code class="ic">projectKey.toUpperCase()</code> first. That way, equivalent requests always hit the same <code class="ic">"use cache"</code> key.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">React.cache() vs "use cache"</h4>
+    <p class="text-storm-200 max-w-3xl">Do not confuse React's per-request <code class="ic">cache(fn)</code> with Next.js's cross-request <code class="ic">"use cache"</code> directive.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/server/auth/session.ts" data-lang="ts" data-hl="1-2"><code>export const getCurrentUser = cache(async (): Promise&lt;CurrentUser | null&gt; =&gt; {
+  const session = await auth.api.getSession({ headers: await headers() });
+  // ...
+});</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">getCurrentUser</code> reads request <code class="ic">headers()</code> and deduplicates the session lookup within a single HTTP request.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-left">
+          <tr>
+            <th class="p-4 font-medium text-storm-300 w-1/4">Feature</th>
+            <th class="p-4 font-semibold text-white"><code class="ic">React.cache(fn)</code> (<code class="ic">import { cache } from "react"</code>)</th>
+            <th class="p-4 font-semibold text-vivid-300"><code class="ic">"use cache"</code> (Next.js Cache Components)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 text-storm-300">Lifetime</td>
+            <td class="p-4 text-storm-100">One single server render pass (same HTTP request)</td>
+            <td class="p-4 text-storm-100">Across requests and users via <code class="ic">cacheLife("tracker")</code> (stale, revalidate, expire)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">Reads cookies / headers?</td>
+            <td class="p-4 text-vivid-300">Yes — ideal for <code class="ic">getCurrentUser()</code></td>
+            <td class="p-4 text-coral-300">No — reading <code class="ic">cookies()</code> or <code class="ic">headers()</code> throws</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">Invalidation</td>
+            <td class="p-4 text-storm-100">Cleared automatically when the HTTP request ends</td>
+            <td class="p-4 text-vivid-300">Invalidated on writes via <code class="ic">updateTag(tag)</code> or <code class="ic">revalidateTag(tag, "max")</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Surgical cache invalidation on writes (updateTag)</h4>
+    <p class="text-storm-200 max-w-3xl">When a Server Action mutates an issue, it calls <code class="ic">invalidate.issueChanged(issue)</code> to expire every affected tag immediately for read-your-own-writes consistency.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>invalidate.issueChanged(issue) fans out to three updateTag calls: issue detail, projectIssues list, and projects open count</title>
+          <rect x="16" y="76" width="230" height="88" rx="16" fill="#153139" stroke="#02EFF0" stroke-width="2"/>
+          <text x="131" y="114" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">issueChanged(issue)</text>
+          <text x="131" y="138" text-anchor="middle" fill="#879497" font-size="13">{ id, projectId }</text>
+
+          <line x1="246" y1="100" x2="346" y2="50" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <line x1="246" y1="120" x2="346" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <line x1="246" y1="140" x2="346" y2="190" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="356" y="18" width="368" height="58" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="376" y="44" fill="#FFFFFF" font-size="13" font-weight="600">updateTag(cacheTags.issue(issue.id))</text>
+          <text x="376" y="64" fill="#81F7F7" font-size="13">expires the issue detail page</text>
+
+          <rect x="356" y="91" width="368" height="58" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="376" y="117" fill="#FFFFFF" font-size="13" font-weight="600">updateTag(cacheTags.projectIssues(issue.projectId))</text>
+          <text x="376" y="137" fill="#81F7F7" font-size="13">expires title, status &amp; updated time in the list</text>
+
+          <rect x="356" y="164" width="368" height="58" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="376" y="190" fill="#FFFFFF" font-size="13" font-weight="600">updateTag(cacheTags.projects())</text>
+          <text x="376" y="210" fill="#81F7F7" font-size="13">status change moves the open-issue count</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">updateTag()</code> expires all three tags immediately so the user's redirect or re-render sees their own write right away.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/server/revalidate.ts" data-lang="ts" data-hl="2-4"><code>issueChanged(issue: { id: string; projectId: string }) {
+  updateTag(cacheTags.issue(issue.id));                // the detail page
+  updateTag(cacheTags.projectIssues(issue.projectId)); // title, status, updated time in the list
+  updateTag(cacheTags.projects());                     // a status change moves the open-issue count
+},</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">One helper centralizes the tag fan-out so no Server Action forgets a dependent view.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Explain the difference between <code class="ic">React.cache</code> and Next.js <code class="ic">"use cache"</code>, and when you use both together.</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">React.cache</code> (single request):</strong> Memoizes a function for the duration of a single request's render tree. If Layout, Page, and a child component all call <code class="ic">getCurrentUser()</code>, the session DB query runs only once for that request.</p>
+        <p><strong class="text-vivid-300"><code class="ic">"use cache"</code> (cross-request):</strong> Stores results in Next.js's cache shared across requests and users, controlled by <code class="ic">cacheLife</code> and <code class="ic">cacheTag</code>.</p>
+        <p><strong class="text-vivid-300">Using both together:</strong> <code class="ic">"use cache"</code> cannot read request-specific <code class="ic">cookies()</code>. We read the user outside with <code class="ic">React.cache</code> (<code class="ic">getCurrentUser</code>) and pass only non-user-specific arguments into <code class="ic">"use cache"</code> functions.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">What is the difference between <code class="ic">updateTag(tag)</code> and <code class="ic">revalidateTag(tag, "max")</code> in Next.js 16?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">updateTag(tag)</code>:</strong> Can only be called inside a Server Action. It expires the cache entry immediately so the next read in the same turn waits for fresh data (read-your-own-writes).</p>
+        <p><strong class="text-vivid-300"><code class="ic">revalidateTag(tag, "max")</code>:</strong> Used in Route Handlers or webhooks and performs stale-while-revalidate (serves stale data while refreshing in the background).</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-07" data-toc="3.7 Server Actions" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.7</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">"use server" · HTTP POST · Zod · FormState · redirect()</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Server Actions and security</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">When a file starts with <code class="ic">"use server"</code>, Next.js creates a <mark class="hl">public HTTP POST endpoint</mark> for every exported function.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A Server Action is a shop's back door. It must stay locked and checked even if no sign on the street points to it.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The 5-step security checklist in updateIssueAction</h4>
+    <p class="text-storm-200 max-w-3xl">Every Server Action in <code class="ic">src/features/issues/actions.ts</code> treats the caller as untrusted and executes five steps in order.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">5-step checklist · <code class="ic">updateIssueAction</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">Authenticate</p>
+          <p class="text-xs text-storm-300"><code class="ic">await requireUser()</code> checks session.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">Validate with Zod</p>
+          <p class="text-xs text-storm-300"><code class="ic">EditIssueInput.safeParse</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Authorize + mutate</p>
+          <p class="text-xs text-storm-300">DAL checks <code class="ic">can.editIssue</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white">Expire cache tags</p>
+          <p class="text-xs text-storm-300"><code class="ic">invalidate.issueChanged</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">05</p>
+          <p class="font-semibold text-white">Redirect outside</p>
+          <p class="text-xs text-storm-300">After <code class="ic">try/catch</code> block!</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/actions.ts" data-lang="ts" data-hl="7,11-12,17,23,26"><code>export async function updateIssueAction(
+  issueId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise&lt;FormState&gt; {
+  // 1. Authenticate the caller (never trust that the button was hidden in UI)
+  const user = await requireUser();
+
+  // 2. Validate form data with Zod
+  const values = formValues(formData);
+  const parsed = EditIssueInput.safeParse(values);
+  if (!parsed.success) return invalid(values, parsed.error);
+
+  // 3. Authorize &amp; mutate inside the DAL (checks can.editIssue)
+  let issue;
+  try {
+    issue = await updateIssue(user, issueId, parsed.data);
+  } catch (error) {
+    return failed(values, error);
+  }
+
+  // 4. Expire affected cache tags
+  invalidate.issueChanged(issue);
+
+  // 5. Redirect OUTSIDE try/catch!
+  redirect(`/projects/${issue.projectKey}/issues/${issue.number}` as Route);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">requireUser()</code>, <code class="ic">EditIssueInput.safeParse()</code>, and <code class="ic">updateIssue()</code> enforce authentication, schema validation, and <code class="ic">can.editIssue</code> authorization on the server.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">The marked line places <code class="ic">redirect()</code> outside the <code class="ic">try/catch</code> block so <code class="ic">catch</code> cannot swallow the redirect exception.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Three traps every senior candidate must know</h4>
+    <p class="text-storm-200 max-w-3xl">Bound arguments, <code class="ic">redirect()</code> exceptions, and validation errors behave differently from client-side routers.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 1 · Bound arguments are untrusted input</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">updateIssueAction.bind(null, issue.id)</code> is serialized into hidden HTML form fields</p>
+      <p class="mt-1 text-sm text-storm-200">An attacker can edit that hidden field in browser DevTools and submit the form. Always validate bound arguments with Zod (<code class="ic">Id.safeParse(projectId)</code>) and check permissions inside the database mutation.</p>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 210" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>DevTools editing a hidden form field created by action.bind(null, issue.id), caught by Zod Id.safeParse and DAL permission check</title>
+          <rect x="14" y="34" width="210" height="142" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="119" y="64" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">1. HTML Form (.bind)</text>
+          <rect x="30" y="82" width="178" height="72" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="119" y="108" text-anchor="middle" fill="#81F7F7" font-size="13">&lt;input type="hidden"</text>
+          <text x="119" y="130" text-anchor="middle" fill="#FFFFFF" font-size="13">value="issue-1" /&gt;</text>
+
+          <line x1="224" y1="105" x2="262" y2="105" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+
+          <rect x="270" y="34" width="210" height="142" rx="16" fill="#153139" stroke="#FF7A6B" stroke-width="2"/>
+          <text x="375" y="64" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">2. Browser DevTools</text>
+          <rect x="286" y="82" width="178" height="72" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="375" y="108" text-anchor="middle" fill="#FF7A6B" font-size="13">attacker edits DOM:</text>
+          <text x="375" y="130" text-anchor="middle" fill="#FFFFFF" font-size="13">value="issue-999"</text>
+
+          <line x1="480" y1="105" x2="518" y2="105" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="526" y="34" width="200" height="142" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="626" y="64" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">3. Server Action + DAL</text>
+          <rect x="542" y="82" width="168" height="72" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="626" y="108" text-anchor="middle" fill="#FFFFFF" font-size="13">Zod Id.safeParse()</text>
+          <text x="626" y="130" text-anchor="middle" fill="#81F7F7" font-size="13">+ can.editIssue(user)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Bound arguments travel to the browser and back. Validate them with Zod and enforce <code class="ic">can.editIssue</code> in the DAL.</figcaption>
+    </figure>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 2 · <code class="ic">redirect()</code> throws <code class="ic">NEXT_REDIRECT</code></p>
+      <p class="mt-2 text-white font-semibold">Putting <code class="ic">redirect()</code> inside <code class="ic">try { ... } catch (err) { return failed(...) }</code> swallows the redirect</p>
+      <p class="mt-1 text-sm text-storm-200"><code class="ic">redirect()</code> and <code class="ic">notFound()</code> throw an internal control-flow exception so React stops rendering immediately. A surrounding <code class="ic">catch</code> block intercepts it and turns a successful save into an error message.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit · Inside <code class="ic">try / catch</code></p>
+        <p class="mt-3 text-storm-200">In Angular, <code class="ic">this.router.navigate(...)</code> returns a normal Promise. In Next.js, calling <code class="ic">redirect()</code> inside <code class="ic">try/catch</code> catches <code class="ic">NEXT_REDIRECT</code> and runs <code class="ic">return failed(values, error)</code>.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ save succeeds, but UI shows an error</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Next.js way · After <code class="ic">try / catch</code></p>
+        <p class="mt-3 text-storm-200">Call <code class="ic">redirect()</code> <em>after</em> the <code class="ic">try/catch</code> block (or call <code class="ic">unstable_rethrow(err)</code> inside <code class="ic">catch</code>) so Next.js catches <code class="ic">NEXT_REDIRECT</code> at the framework level.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ sends 303 redirect / client navigation</p>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 3 · Expected validation errors must be returned as <code class="ic">FormState</code> values</p>
+      <p class="mt-2 text-white font-semibold">Throwing a validation error triggers <code class="ic">error.tsx</code> and destroys what the user typed</p>
+      <p class="mt-1 text-sm text-storm-200">Return <code class="ic">{ values, fieldErrors, message }</code> into <code class="ic">useActionState</code> instead. <code class="ic">IssueForm</code> then preserves typed values (<code class="ic">const v = { ...defaults, ...state.values }</code>) and displays inline field errors.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Wrong: Throw validation error</p>
+        <p class="mt-3 text-storm-200">Throwing from a Server Action jumps to the nearest <code class="ic">error.tsx</code> boundary and unmounts <code class="ic">IssueForm</code>.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ error.tsx replaces form; typed values lost</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Right: Return <code class="ic">FormState</code> value</p>
+        <p class="mt-3 text-storm-200">Return <code class="ic">invalid(values, parsed.error)</code> as <code class="ic">{ values, fieldErrors, message }</code> into <code class="ic">useActionState</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ form stays mounted with inline fieldErrors</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why does <code class="ic">redirect()</code> fail when placed inside a <code class="ic">try/catch</code> block in a Server Action?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">redirect()</code> throws <code class="ic">NEXT_REDIRECT</code>:</strong> In Next.js, <code class="ic">redirect()</code> does not return a value. It throws a special internal error (<code class="ic">NEXT_REDIRECT</code>). Next.js catches that error higher up to send a <code class="ic">303</code> redirect header or stream a client router navigation.</p>
+        <p><strong class="text-vivid-300">How to fix it:</strong> Putting <code class="ic">redirect()</code> inside <code class="ic">try/catch</code> intercepts that exception. Either place <code class="ic">redirect()</code> after the <code class="ic">try/catch</code> block or call <code class="ic">unstable_rethrow(err)</code> inside <code class="ic">catch</code>.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Does <code class="ic">myAction.bind(null, secretId)</code> keep <code class="ic">secretId</code> secret on the server?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">No.</strong> Next.js sends bound arguments to the client in hidden form fields so the browser can send them back when the form is submitted.</p>
+        <p>Never pass secrets to <code class="ic">.bind()</code>, and always validate and authorize bound IDs on the server just like <code class="ic">FormData</code> fields.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-08" data-toc="3.8 Auth &amp; testing" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.8</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Defense-in-Depth · proxy.ts · Session Cache · PGlite · Playwright</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Auth defense-in-depth and testing</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Layouts never gate authentication. Next Issue Tracker enforces <mark class="hl">three security layers</mark> and verifies them with a four-layer test pyramid using zero database mocks.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A bank has a door guard, a counter clerk who checks your ID, and a vault with its own key.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Why layouts never gate authentication</h4>
+    <p class="text-storm-200 max-w-3xl">Putting authentication checks only inside <code class="ic">layout.tsx</code> is a critical security vulnerability in Next.js App Router (<code class="ic">docs/adr/0012-session-strategy.md</code>).</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit: Parent <code class="ic">canActivate</code></p>
+        <p class="mt-3 text-storm-200">In Angular, putting <code class="ic">canActivate: [authGuard]</code> on a parent route protects every child route. Trying to do the same in Next.js <code class="ic">layout.tsx</code> leaves child pages and actions exposed.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ layout auth check is bypassed</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Next.js way: 3-layer defense-in-depth</p>
+        <p class="mt-3 text-storm-200">Check cookie existence in <code class="ic">proxy.ts</code>, validate the DB session with <code class="ic">requireUser()</code> in every page and action, and enforce <code class="ic">can.*</code> rules in the DAL.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ every page and action verifies auth</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 250" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Three reasons a layout.tsx auth gate fails: sibling navigation skips re-rendering layout, pages stream separately, and Server Actions are POSTed directly</title>
+          <rect x="14" y="20" width="210" height="210" rx="16" fill="#153139" stroke="#FF7A6B" stroke-dasharray="6 4"/>
+          <text x="119" y="52" text-anchor="middle" fill="#FF7A6B" font-size="15" font-weight="600">layout.tsx gate (unsafe)</text>
+          <text x="119" y="78" text-anchor="middle" fill="#879497" font-size="13">only renders navbar UI</text>
+          <rect x="30" y="98" width="178" height="110" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="119" y="130" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">Bypassed in 3 ways →</text>
+          <text x="119" y="156" text-anchor="middle" fill="#879497" font-size="13">does not guard child</text>
+          <text x="119" y="176" text-anchor="middle" fill="#879497" font-size="13">pages or POST actions</text>
+
+          <line x1="224" y1="56" x2="274" y2="56" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+          <line x1="224" y1="125" x2="274" y2="125" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+          <line x1="224" y1="194" x2="274" y2="194" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+
+          <rect x="282" y="22" width="442" height="58" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="302" y="47" fill="#FFFFFF" font-size="13" font-weight="600">1. Sibling navigation (WEB → MOBILE)</text>
+          <text x="302" y="67" fill="#879497" font-size="13">The parent layout.tsx does not render again</text>
+
+          <rect x="282" y="96" width="442" height="58" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="302" y="121" fill="#FFFFFF" font-size="13" font-weight="600">2. Pages stream separately from layouts</text>
+          <text x="302" y="141" fill="#879497" font-size="13">Child pages run and stream on their own</text>
+
+          <rect x="282" y="170" width="442" height="58" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="302" y="195" fill="#FFFFFF" font-size="13" font-weight="600">3. Server Actions are POSTed to directly</text>
+          <text x="302" y="215" fill="#879497" font-size="13">A direct HTTP POST skips every layout</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Because sibling routes skip re-rendering <code class="ic">layout.tsx</code>, pages stream independently, and Server Actions bypass layouts completely, every page and action must verify auth itself.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Defense-in-depth across 3 layers</h4>
+    <p class="text-storm-200 max-w-3xl">Authentication and authorization run at three concentric layers on the server.</p>
+
+    <div class="reveal flex flex-col items-center gap-2 text-center">
+      <div class="w-[56%] rounded-xl bg-vivid-400/40 text-white py-3 px-4 font-semibold">1. <code class="ic">src/proxy.ts</code> · Cookie exists check (no DB)</div>
+      <div class="w-[78%] rounded-xl bg-vivid-400/70 text-storm-900 py-3 px-4 font-semibold">2. Page &amp; Action · <code class="ic">requireUser</code> / <code class="ic">requireAdmin</code> (<code class="ic">React.cache</code> DB session)</div>
+      <div class="w-full rounded-xl bg-vivid-400 text-storm-900 py-3 px-4 font-semibold">3. DAL · <code class="ic">queries.ts</code> / <code class="ic">mutations.ts</code> + <code class="ic">permissions.ts</code> (<code class="ic">can.editIssue</code> before SQL)</div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">1. <code class="ic">src/proxy.ts</code></p>
+        <p class="mt-1 text-sm text-storm-300">Called <code class="ic">middleware.ts</code> prior to Next 16. Fast, optimistic check that verifies a session cookie exists (<code class="ic">getSessionCookie(request)</code>) and redirects anonymous visitors. No DB call here.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">2. Page &amp; Action (<code class="ic">session.ts</code>)</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">requireUser</code> and <code class="ic">requireAdmin</code> validate the session token against the PostgreSQL <code class="ic">sessions</code> table, deduplicated per request via <code class="ic">React.cache</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="circle-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">3. DAL (<code class="ic">permissions.ts</code>)</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">queries.ts</code> and <code class="ic">mutations.ts</code> check role and ownership (<code class="ic">can.editIssue(actor, row)</code>) right before reading or writing SQL.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The 4-layer testing pyramid (zero database mocks)</h4>
+    <p class="text-storm-200 max-w-3xl">Instead of mocking SQL queries, integration tests run real Drizzle migrations on in-memory PGlite (Postgres compiled to WASM; <code class="ic">docs/adr/0010-integration-tests-pglite.md</code>). Playwright E2E tests run against a production build (<code class="ic">docs/adr/0006-testing-strategy.md</code>).</p>
+
+    <div class="reveal flex flex-col items-center gap-2 text-center">
+      <div class="w-[46%] rounded-xl bg-vivid-400 text-storm-900 py-3 px-4 font-semibold">4. Playwright E2E · <code class="ic">next build &amp;&amp; next start</code></div>
+      <div class="w-[64%] rounded-xl bg-vivid-400/70 text-storm-900 py-3 px-4 font-semibold">3. DB &amp; Action Integration · in-memory PGlite (<code class="ic">*.int.test.ts</code>)</div>
+      <div class="w-[82%] rounded-xl bg-vivid-400/40 text-white py-3 px-4 font-semibold">2. Client Components &amp; Hooks · Testing Library (<code class="ic">*.test.tsx</code>)</div>
+      <div class="w-full rounded-xl bg-storm-700 text-white py-3 px-4 font-semibold">1. Unit · pure functions, Zod &amp; URL parsers (<code class="ic">*.test.ts</code>)</div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sliders" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">1. Unit tests (<code class="ic">*.test.ts</code>)</p>
+        <p class="mt-1 text-sm text-storm-300">Pure functions, Zod schemas, and URL search param parsers: <code class="ic">permissions.test.ts</code> and <code class="ic">search-params.test.ts</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="activity" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">2. Client Components &amp; Hooks (<code class="ic">*.test.tsx</code>)</p>
+        <p class="mt-1 text-sm text-storm-300">Testing Library + <code class="ic">userEvent</code> + fake timers: <code class="ic">comment-thread.test.tsx</code> and <code class="ic">use-debounced-callback.test.tsx</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="box" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">3. DB &amp; Action integration (<code class="ic">*.int.test.ts</code>)</p>
+        <p class="mt-1 text-sm text-storm-300">Runs real Drizzle SQL migrations and queries against in-memory PGlite (WASM Postgres, zero mocked SQL). <code class="ic">issues/actions.int.test.ts</code> asserts exact <code class="ic">updateTag()</code> calls and <code class="ic">redirect()</code> targets.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">4. Playwright E2E (<code class="ic">e2e/</code>)</p>
+        <p class="mt-1 text-sm text-storm-300">Runs against a real <code class="ic">next build &amp;&amp; next start</code> production build to test Server Components, streaming, caching, and React <code class="ic">&lt;Activity&gt;</code> DOM retention.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">An Angular architect moving to Next.js suggests checking the user's session in <code class="ic">src/app/(app)/layout.tsx</code> so individual pages don't have to. How do you respond in a design review?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Reject that design.</strong> In Next.js App Router, layouts do not re-execute on client-side navigations between child routes. Pages also stream independently of layouts, and Server Actions bypass layouts completely.</p>
+        <p><strong class="text-vivid-300">Where auth belongs:</strong> Layout checks are only for displaying user UI (like the navbar avatar). Real authentication and authorization must happen in every page's data access calls and inside every Server Action.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why can't you unit-test an <code class="ic">async</code> Server Component that uses <code class="ic">&lt;Suspense&gt;</code> and <code class="ic">"use cache"</code> in Vitest + Testing Library?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Missing server runtime in JSDOM:</strong> Testing Library's <code class="ic">render()</code> runs in a client-like JSDOM environment. It lacks Next.js's RSC stream serializer, <code class="ic">"use cache"</code> runtime, and server request context (<code class="ic">headers()</code>, <code class="ic">cookies()</code>).</p>
+        <p><strong class="text-vivid-300">Cleanest test split:</strong> Test data queries and Server Actions directly in fast integration tests with in-memory PGlite. Then test <code class="ic">async</code> Server Component pages end-to-end with Playwright against a production build.</p>
+      </div>
+    </article>
+  </div>
+</section>

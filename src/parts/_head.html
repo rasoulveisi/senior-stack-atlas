@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Senior Stack Atlas</title>
+<meta name="description" content="A visual guide to senior engineering with Express 5, .NET 10, React 19 and Next.js 16, built from three real production codebases.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<meta name="theme-color" content="#0F282F">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Senior Stack Atlas">
+<meta property="og:description" content="A visual guide to senior engineering with Express 5, .NET 10, React 19 and Next.js 16, built from three real production codebases.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="bg-storm-950 text-storm-100 font-sans antialiased selection:bg-vivid-400 selection:text-storm-900">
+
+<!-- shared SVG definitions: use marker-end="url(#arw)" or "url(#arw-cyan)", fill="url(#g-brand)", filter="url(#glow)" -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#879497"/></marker>
+    <marker id="arw-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#02EFF0"/></marker>
+    <marker id="arw-coral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF7A6B"/></marker>
+    <linearGradient id="g-brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0F282F"/><stop offset="1" stop-color="#02EFF0"/></linearGradient>
+    <linearGradient id="g-cyan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#02EFF0"/><stop offset="1" stop-color="#81F7F7"/></linearGradient>
+    <radialGradient id="g-orb" cx=".35" cy=".35" r=".75"><stop offset="0" stop-color="#C0FBFB"/><stop offset=".45" stop-color="#02EFF0"/><stop offset="1" stop-color="#017E7F"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+</svg>
+
+<div id="progress" class="fixed top-0 left-0 h-[3px] z-[60] brand-line" style="width:0"></div>
+
+<header class="fixed top-0 inset-x-0 z-50 h-16 bg-storm-950/85 backdrop-blur border-b border-storm-700/70">
+  <div class="h-full flex items-center gap-3 px-4 sm:px-6">
+    <button id="toc-toggle" class="xl:hidden grid place-items-center w-10 h-10 rounded-xl border border-storm-600 text-storm-100 hover:border-vivid-400" aria-label="Open contents" aria-controls="toc" aria-expanded="false">
+      <i data-lucide="list" class="w-5 h-5"></i>
+    </button>
+    <a href="#top" class="flex items-center gap-2.5 shrink-0">
+      <span class="w-8 h-8 rounded-xl" style="background:radial-gradient(circle at 30% 30%,#C0FBFB,#02EFF0 45%,#0F282F 100%)"></span>
+      <span class="font-semibold text-white tracking-tight">Senior Stack Atlas</span>
+    </a>
+    <nav class="ml-auto hidden md:flex items-center gap-1 text-sm" aria-label="Modules">
+      <a href="#matrix" class="px-3 py-1.5 rounded-lg text-storm-200 hover:text-white hover:bg-storm-800">Cross-stack</a>
+      <a href="#module-express" class="px-3 py-1.5 rounded-lg text-storm-200 hover:text-white hover:bg-storm-800">Express 5</a>
+      <a href="#module-dotnet" class="px-3 py-1.5 rounded-lg text-storm-200 hover:text-white hover:bg-storm-800">.NET 10</a>
+      <a href="#module-react" class="px-3 py-1.5 rounded-lg text-storm-200 hover:text-white hover:bg-storm-800">React 19 + Next 16</a>
+    </nav>
+  </div>
+</header>
+
+<aside id="toc" class="fixed z-40 top-16 bottom-0 left-0 w-72 overflow-y-auto bg-storm-950 border-r border-storm-700/70 px-3 py-6" aria-label="Contents">
+  <p class="px-3 text-[11px] uppercase tracking-[.2em] text-storm-400 font-semibold">Contents</p>
+  <nav id="toc-nav" class="mt-3 space-y-5"></nav>
+</aside>
+<div id="toc-scrim" class="fixed inset-0 z-30 bg-storm-950/70 hidden xl:hidden"></div>
+
+<main id="top" class="pt-16 xl:pl-72">

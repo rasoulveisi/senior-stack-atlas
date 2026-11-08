@@ -1,0 +1,936 @@
+<section id="dn-06" data-toc="2.6 HTTP, AI &amp; RAG" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.6</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">IHttpClientFactory · pgvector RAG · ADR 0002</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Resilient HTTP, AI and pgvector</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Integrate LLMs and vector search cleanly with pooled HTTP handlers, hash deduplication, and <mark class="hl">deterministic C# fallbacks</mark>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="car" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Deterministic fallback is a car with a spare tyre. When the external AI tyre goes flat, C# rules keep the trip moving.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">1. Typed <code class="ic">HttpClient</code> via <code class="ic">IHttpClientFactory</code></h4>
+    <p class="text-storm-200 max-w-3xl">In <code class="ic">Program.cs</code>, HTTP clients are registered through <code class="ic">IHttpClientFactory</code> so the runtime manages handler pooling and DNS refresh automatically.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 1: <code class="ic">using var client = new HttpClient()</code> per request</p>
+        <p class="mt-2 text-white font-semibold">Sockets linger in <code class="ic">TIME_WAIT</code> → Socket Exhaustion</p>
+        <p class="mt-1 text-sm text-storm-200">Disposing <code class="ic">HttpClient</code> does not close the underlying TCP socket immediately. Under load, lingering <code class="ic">TIME_WAIT</code> sockets exhaust all OS ports.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 2: Naive Singleton <code class="ic">HttpClient</code></p>
+        <p class="mt-2 text-white font-semibold">Stale DNS records forever</p>
+        <p class="mt-1 text-sm text-storm-200">A single long-lived <code class="ic">HttpClient</code> reuses connections indefinitely and ignores DNS changes when upstream cloud IPs rotate.</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>IHttpClientFactory pools HttpMessageHandler instances and rotates them every few minutes so DNS stays fresh</title>
+          <rect x="14" y="62" width="185" height="116" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="106" y="98" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">OpenAiCompatibleClient</text>
+          <text x="106" y="122" text-anchor="middle" fill="#81F7F7" font-size="13">Typed IAiClient</text>
+          <text x="106" y="146" text-anchor="middle" fill="#879497" font-size="13">Fresh wrapper per request</text>
+
+          <line x1="199" y1="120" x2="262" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="270" y="24" width="245" height="192" rx="18" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="392" y="52" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">IHttpClientFactory Handler Pool</text>
+
+          <rect x="290" y="68" width="205" height="56" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="392" y="93" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">Active HttpMessageHandler</text>
+          <text x="392" y="113" text-anchor="middle" fill="#81F7F7" font-size="13">Reused across requests</text>
+
+          <rect x="290" y="138" width="205" height="58" rx="10" fill="#153139" stroke="#2E464C"/>
+          <text x="392" y="163" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">Rotated every few minutes</text>
+          <text x="392" y="183" text-anchor="middle" fill="#879497" font-size="13">Refreshes DNS safely</text>
+
+          <line x1="515" y1="120" x2="572" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="580" y="62" width="146" height="116" rx="16" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="653" y="98" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Warm TCP Pool</text>
+          <text x="653" y="122" text-anchor="middle" fill="#81F7F7" font-size="13">OpenRouter API</text>
+          <text x="653" y="146" text-anchor="middle" fill="#FFFFFF" font-size="13">Zero TIME_WAIT spike</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">IHttpClientFactory</code> pools <code class="ic">HttpMessageHandler</code> instances to prevent socket exhaustion and rotates them every few minutes so DNS stays fresh.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="api/JobCraft.Api/Program.cs" data-lang="cs" data-hl="1"><code>builder.Services.AddHttpClient&lt;IAiClient, OpenAiCompatibleClient&gt;();</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">Registers <code class="ic">OpenAiCompatibleClient</code> (lines 53–55) with a managed <code class="ic">HttpClient</code> from the factory pool.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Callers inject <code class="ic">IAiClient</code> without ever calling <code class="ic">new HttpClient()</code> directly.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">2. Linked timeouts (<code class="ic">CancellationTokenSource.CreateLinkedTokenSource</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">Even when <code class="ic">HttpClient.Timeout</code> is 90 seconds, an embedding call should never hang for 90 seconds.</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">90 s</p>
+        <p class="mt-1 text-sm text-storm-300">overall <code class="ic">HttpClient.Timeout</code></p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">25 s</p>
+        <p class="mt-1 text-sm text-storm-300">embedding limit in <code class="ic">EmbedAsync</code></p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-white">2 signals</p>
+        <p class="mt-1 text-sm text-storm-300">user <code class="ic">ct</code> OR 25 s timer</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">503</p>
+        <p class="mt-1 text-sm text-storm-300">outage caught by fallback rules</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Two triggers feed one linked token in <code class="ic">OpenAiCompatibleClient.EmbedAsync</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">User token (<code class="ic">ct</code>)</p>
+          <p class="text-xs text-storm-300">fires if the browser disconnects</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">25 s timer</p>
+          <p class="text-xs text-storm-300"><code class="ic">CancelAfter(TimeSpan.FromSeconds(25))</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03</p>
+          <p class="font-semibold text-white">Linked token</p>
+          <p class="text-xs text-storm-300"><code class="ic">CreateLinkedTokenSource(ct)</code></p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">on trigger</p>
+          <p class="font-semibold text-white">Cancel HTTP call</p>
+          <p class="text-xs text-storm-300">whichever happens first stops <code class="ic">EmbedAsync</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="api/JobCraft.Api/Ai/OpenAiCompatibleClient.cs" data-lang="cs" data-hl="1-2"><code>using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">CreateLinkedTokenSource(ct)</code> links the incoming HTTP request token to a new local token source (lines 56–58).</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">CancelAfter</code> enforces a strict 25-second ceiling on the embedding request.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">3. Content-hash deduplication for <code class="ic">pgvector</code> embeddings</h4>
+    <p class="text-storm-200 max-w-3xl">Generating embeddings costs money and latency. <code class="ic">EmbeddingIndex.UpsertProfileAsync</code> hashes every resume bullet with SHA-256 (<code class="ic">Chunker.ComputeHash(c)</code>) so unchanged bullets are never embedded twice.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 280" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Content-hash deduplication embeds only modified resume bullets and queries nearest neighbors in Postgres</title>
+          <rect x="14" y="20" width="224" height="240" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="126" y="48" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Resume Bullets + SHA-256</text>
+
+          <rect x="28" y="64" width="196" height="50" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="126" y="85" text-anchor="middle" fill="#FFFFFF" font-size="13">Bullet 1 · hash a3f9</text>
+          <text x="126" y="103" text-anchor="middle" fill="#879497" font-size="13">Unchanged</text>
+
+          <rect x="28" y="126" width="196" height="50" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="126" y="147" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">Bullet 2 · hash 91c4</text>
+          <text x="126" y="165" text-anchor="middle" fill="#81F7F7" font-size="13">1 line edited</text>
+
+          <rect x="28" y="188" width="196" height="50" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="126" y="209" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">Bullet 3 · hash 7b02</text>
+          <text x="126" y="227" text-anchor="middle" fill="#879497" font-size="13">Removed from resume</text>
+
+          <line x1="238" y1="89" x2="472" y2="66" stroke="#879497" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arw)"/>
+          <line x1="238" y1="151" x2="282" y2="151" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <line x1="238" y1="213" x2="472" y2="162" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+
+          <rect x="290" y="118" width="146" height="66" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="363" y="145" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">Embedding API</text>
+          <text x="363" y="166" text-anchor="middle" fill="#FFFFFF" font-size="13">Only 1 HTTP call</text>
+
+          <line x1="436" y1="151" x2="472" y2="115" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="480" y="20" width="266" height="240" rx="16" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="613" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">PostgreSQL + pgvector</text>
+
+          <rect x="498" y="60" width="230" height="36" rx="8" fill="#153139" stroke="#2E464C"/>
+          <text x="613" y="83" text-anchor="middle" fill="#FFFFFF" font-size="13">Keep unchanged vectors untouched</text>
+
+          <rect x="498" y="104" width="230" height="36" rx="8" fill="#153139" stroke="#02EFF0"/>
+          <text x="613" y="127" text-anchor="middle" fill="#81F7F7" font-size="13">Upsert new vector for Bullet 2</text>
+
+          <rect x="498" y="148" width="230" height="36" rx="8" fill="#153139" stroke="#FF7A6B"/>
+          <text x="613" y="171" text-anchor="middle" fill="#FF7A6B" font-size="13">Delete removed Bullet 3 row</text>
+
+          <rect x="498" y="196" width="230" height="48" rx="10" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="613" y="217" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">Nearest-neighbor SQL sort:</text>
+          <text x="613" y="235" text-anchor="middle" fill="#81F7F7" font-size="13">e.Vector!.CosineDistance(queryVec)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">EmbeddingIndex.cs</code> (lines 12–53) diffs SHA-256 hashes against Postgres and queries nearest neighbors with <code class="ic">OrderBy(e =&gt; e.Vector!.CosineDistance(queryVec))</code>.</figcaption>
+    </figure>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">Example: editing 1 line in a 20-bullet resume</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+          <span class="text-sm text-storm-200">All bullets</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="20"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">20 calls</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+          <span class="text-sm text-storm-200">SHA-256 diff</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">1 call</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400"><code class="ic">Chunker.ComputeHash(c)</code> re-embeds only the modified bullet and leaves all other vectors untouched.</p>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">4. Deterministic fallback (<code class="ic">ADR 0002</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">External AI APIs fail, so the deterministic fallback in <code class="ic">AnalysisService.cs</code> computes both the fit score (<code class="ic">FitScoring.cs</code>) and the visa check (<code class="ic">EligibilityRules.cs</code>) first. It then blends AI insights on top only when available.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Deterministic-first analysis in <code class="ic">AnalysisService.cs</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">01</p>
+          <p class="font-semibold text-white">C# rules first</p>
+          <p class="text-xs text-storm-300">fit score (<code class="ic">FitScoring.cs</code>) &amp; visa check (<code class="ic">EligibilityRules.cs</code>)</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">Call OpenRouter</p>
+          <p class="text-xs text-storm-300">blends AI insights on top if available</p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">03</p>
+          <p class="font-semibold text-white"><code class="ic">503</code> or timeout</p>
+          <p class="text-xs text-storm-300">external AI fails or times out</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04</p>
+          <p class="font-semibold text-white">Working analysis</p>
+          <p class="text-xs text-storm-300">returns deterministic fit score and visa check, never a crash screen</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-07" data-toc="2.7 Testing .NET" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.7</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">WebApplicationFactory · Pure Domain · Fault Injection</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Testing like a senior</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Replace fragile mock suites with <mark class="hl">zero-mock domain tests</mark> and real pipeline tests against a test database branch.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="siren" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Fault-injection testing is a fire drill with real smoke, not a poster of a fire. You break the AI client on purpose and verify that the real pipeline still saves and returns <code class="ic">200 OK</code>.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Mock hell vs real architecture verification</h4>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Mock hell (500 <code class="ic">Mock&lt;IRepository&gt;</code> tests)</p>
+        <p class="mt-3 text-storm-200">Tests configure <code class="ic">Mock&lt;IRepository&gt;</code> to return a fake list and assert that the service returned the same fake list.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ SQL query breaks in production while all 500 mock tests pass green</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Senior suite in <code class="ic">JobCraft.Api.Tests</code></p>
+        <p class="mt-3 text-storm-200">Pure static functions run with zero mocks, and <code class="ic">WebApplicationFactory&lt;Program&gt;</code> tests real EF Core SQL against a Neon test branch.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ catches real regex, SQL, DI, and outage bugs</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">1. Pure domain tests</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">DomainRulesTests.cs</code> tests <code class="ic">FitScoring</code>, <code class="ic">EligibilityRules</code>, <code class="ic">ResumeLimits</code>, and <code class="ic">CoverLetterGuard</code> with zero mocks.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="database" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">2. Real integration tests</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">ApiIntegrationTests.cs</code> boots <code class="ic">WebApplicationFactory&lt;Program&gt;</code> against a dedicated Neon PostgreSQL test branch.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">3. Fault-injection tests</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">ThrowingAiClient</code> forces a simulated OpenRouter outage to prove fallback rules save to Postgres and return <code class="ic">200 OK</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">1. Pure domain tests (<code class="ic">DomainRulesTests.cs</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">Because <code class="ic">FitScoring</code>, <code class="ic">EligibilityRules</code>, <code class="ic">ResumeLimits</code>, and <code class="ic">CoverLetterGuard</code> are pure static functions with zero dependencies, tests pass tricky real-world strings and assert the exact output.</p>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-left">
+          <tr>
+            <th class="p-4 font-semibold text-white w-1/3">Tricky real-world string</th>
+            <th class="p-4 font-semibold text-coral-300 w-1/3">Why naive matching fails</th>
+            <th class="p-4 font-semibold text-vivid-300 w-1/3">Expected result in <code class="ic">DomainRulesTests.cs</code></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 font-mono text-white"><code class="ic">"Helsinki, Finland"</code></td>
+            <td class="p-4 text-storm-200">Contains the letters <code class="ic">"nl"</code> inside <code class="ic">"Finland"</code>.</td>
+            <td class="p-4 text-vivid-300">Does not match Netherlands (<code class="ic">nl</code>); <code class="ic">EligibilityRules</code> checks boundaries.</td>
+          </tr>
+          <tr>
+            <td class="p-4 font-mono text-white"><code class="ic">"ready to go to meetups"</code></td>
+            <td class="p-4 text-storm-200">Uses the common English verb <code class="ic">"go"</code>.</td>
+            <td class="p-4 text-vivid-300">Does not match the <code class="ic">Go</code> programming language in <code class="ic">FitScoring</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">2. Real integration tests (<code class="ic">ApiIntegrationTests.cs</code> &amp; <code class="ic">TestDatabase.cs</code>)</h4>
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">In-memory ASP.NET Core pipeline connected to a Neon test branch</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white"><code class="ic">WebApplicationFactory&lt;Program&gt;</code></p>
+          <p class="text-xs text-storm-300">boots the real ASP.NET Core pipeline in memory</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white"><code class="ic">TestDatabase.cs</code></p>
+          <p class="text-xs text-storm-300">verifies <code class="ic">HostOf(test) != HostOf(real)</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Neon test branch</p>
+          <p class="text-xs text-storm-300">runs real SQL queries against a Neon test branch</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea · Database safety guard in <code class="ic">TestDatabase.cs</code></p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium"><code class="ic">TestDatabase.cs</code> asserts <code class="ic">HostOf(test) != HostOf(real)</code> before running any test so integration tests can never touch real production data.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">3. Fault-injection testing with <code class="ic">ThrowingAiClient</code></h4>
+    <p class="text-storm-200 max-w-3xl">In <code class="ic">ApiIntegrationTests.cs</code> (lines 15–28), the only services replaced in DI are the external paid AI clients. Instead of returning fake happy data, <code class="ic">ThrowingAiClient</code> throws an exception.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Fault injection on <code class="ic">POST /applications/{id}/analyze</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white"><code class="ic">POST /applications/{id}/analyze</code></p>
+          <p class="text-xs text-storm-300">hits real endpoint in memory</p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">02</p>
+          <p class="font-semibold text-white"><code class="ic">ThrowingAiClient</code></p>
+          <p class="text-xs text-storm-300">throws <code class="ic">HttpRequestException("Simulated OpenRouter failure")</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Fallback + Postgres save</p>
+          <p class="text-xs text-storm-300">catches outage, runs C# rules, saves to real DB</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04</p>
+          <p class="font-semibold text-white"><code class="ic">200 OK</code></p>
+          <p class="text-xs text-storm-300">returns working deterministic analysis</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-08" data-toc="2.8 5 project blueprints" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.8</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">ASP.NET Core 10 Minimal APIs · EF Core · Postgres · Angular 20</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">5 project blueprints</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Five system designs combine <mark class="hl">ASP.NET Core 10, Postgres, and Angular 20</mark> to prove senior backend depth.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="layers" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A senior portfolio blueprint is a flight simulator, not a paper plane. Each design exercises real failure modes like backpressure, cache stampedes, concurrency conflicts, and financial rounding.</p>
+    </div>
+  </div>
+
+  <div class="space-y-8">
+    <!-- Blueprint 1 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="terminal" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Blueprint 1 · Standalone or <code class="ic">Features/InterviewPrep</code> slice</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">Multi-Stage Technical Interview Simulator &amp; Evaluator</h4>
+          <p class="mt-2 text-storm-200">This tool takes a target job description and your resume to generate role-specific system design and coding questions. It records written or voice-transcribed answers in a timed workspace and grades them against a strict rubric using RAG and deterministic C# checks.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Backend (.NET 10) highlights</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><i data-lucide="radio" class="w-3.5 h-3.5 text-vivid-400"></i> Server-Sent Events (SSE)</span>
+            <span class="chip"><code class="ic">Results.Stream(...)</code></span>
+            <span class="chip"><code class="ic">TypedResults.ServerSentEvents(...)</code></span>
+            <span class="chip"><code class="ic">IAsyncEnumerable&lt;T&gt;</code></span>
+            <span class="chip"><code class="ic">pgvector</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">Server-Sent Events (SSE):</strong> Stream AI interviewer follow-up feedback token-by-token to Angular using <code class="ic">Results.Stream(...)</code> or <code class="ic">TypedResults.ServerSentEvents(...)</code>.</li>
+            <li><strong class="text-white">Domain state machine:</strong> Pure C# transitions (<code class="ic">NotStarted -&gt; QuestionAsked -&gt; AnswerSubmitted -&gt; Graded</code>) block invalid state jumps.</li>
+            <li><strong class="text-white"><code class="ic">pgvector</code> weak-spot search:</strong> Embed past answers to query which C# or distributed systems topics scored below 60% in the last 30 days.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Angular 20 highlights</p>
+          <p class="text-sm text-storm-200">Reactive countdown timer built with <code class="ic">signal()</code> and <code class="ic">computed()</code>, split-screen Markdown answer pad, and a radar chart of topic scores.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Senior interview talking point</p>
+        <p class="mt-2 text-white font-medium">How you handled HTTP response streaming with <code class="ic">IAsyncEnumerable&lt;T&gt;</code> and backpressure when the client disconnects mid-stream.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 2 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Blueprint 2 · Event Delivery Engine</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">High-Throughput Webhook &amp; Event Delivery Engine ("HookRelay")</h4>
+          <p class="mt-2 text-storm-200">Receives webhooks from Stripe, GitHub, and Telegram and fans them out to target endpoints. Includes exponential backoff retries, signature verification, and a dead-letter replay UI.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Backend (.NET 10) highlights</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">Channel.CreateBounded&lt;WebhookEvent&gt;(10_000)</code></span>
+            <span class="chip"><code class="ic">FOR UPDATE SKIP LOCKED</code></span>
+            <span class="chip"><code class="ic">CryptographicOperations.FixedTimeEquals</code></span>
+            <span class="chip">Polly / <code class="ic">Microsoft.Extensions.Http.Resilience</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">Bounded <code class="ic">Channel&lt;T&gt;</code>:</strong> <code class="ic">Channel.CreateBounded&lt;WebhookEvent&gt;(10_000)</code> keeps ingestion under 5 ms with controlled backpressure.</li>
+            <li><strong class="text-white">PostgreSQL <code class="ic">FOR UPDATE SKIP LOCKED</code>:</strong> Multiple background workers poll retryable failed deliveries without locking the table or double-sending.</li>
+            <li><strong class="text-white">HMAC-SHA256 verification:</strong> Zero-allocation signature check with <code class="ic">CryptographicOperations.FixedTimeEquals</code> prevents timing attacks.</li>
+            <li><strong class="text-white">Polly / <code class="ic">Microsoft.Extensions.Http.Resilience</code>:</strong> Standard resilience pipelines with circuit breakers when a downstream server goes down.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Angular 20 highlights</p>
+          <p class="text-sm text-storm-200">Live event stream table, JSON payload diff viewer, and one-click "Replay Dead Letter" batch actions.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Senior interview talking point</p>
+        <p class="mt-2 text-white font-medium">Explaining Idempotency Keys, At-Least-Once Delivery, and how <code class="ic">FOR UPDATE SKIP LOCKED</code> turns Postgres into a lock-free concurrent job queue.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 3 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sliders" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Blueprint 3 · Control Plane</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">Distributed Feature Flag &amp; Rate-Limiting Control Plane</h4>
+          <p class="mt-2 text-storm-200">A control panel where teams toggle feature flags, set percentage rollouts, and configure per-route rate limits without redeploying. For example, a team can enable a new checkout for 20% of UK users.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Backend (.NET 10) highlights</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">HybridCache</code></span>
+            <span class="chip"><code class="ic">XxHash32</code></span>
+            <span class="chip"><code class="ic">PartitionedRateLimiter</code></span>
+            <span class="chip"><code class="ic">xmin</code> / <code class="ic">IsRowVersion()</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white"><code class="ic">HybridCache</code> (.NET 9/10):</strong> Combines fast L1 in-memory cache with L2 distributed cache and automatic stampede protection. Even if 1,000 requests miss the cache at once, only 1 query hits Postgres.</li>
+            <li><strong class="text-white">Deterministic hashing:</strong> Pure C# rule using <code class="ic">XxHash32</code> over <code class="ic">(UserId + FlagKey) % 100</code> gives each user a consistent rollout experience without per-user database state.</li>
+            <li><strong class="text-white">Rate-limiting middleware:</strong> Custom <code class="ic">PartitionedRateLimiter</code> policies driven dynamically from cached rules.</li>
+            <li><strong class="text-white">Optimistic concurrency:</strong> Uses the Postgres <code class="ic">xmin</code> system column (<code class="ic">IsRowVersion()</code> in EF Core) so concurrent flag edits throw <code class="ic">DbUpdateConcurrencyException</code> → <code class="ic">409 Conflict</code> <code class="ic">ProblemDetails</code>.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Angular 20 highlights</p>
+          <p class="text-sm text-storm-200">Rollout percentage sliders, audit log timeline, and an instant rule simulator ("Test what User X in Country NL will see").</p>
+        </div>
+      </div>
+
+      <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 700 130" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+            <title>Deterministic rollout using XxHash32(UserId + FlagKey) % 100 &lt; 20</title>
+            <rect x="12" y="28" width="168" height="74" rx="12" fill="#153139" stroke="#2E464C"/>
+            <text x="96" y="58" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">UserId + FlagKey</text>
+            <text x="96" y="80" text-anchor="middle" fill="#879497" font-size="13">"user-42" + "new-checkout"</text>
+
+            <line x1="180" y1="65" x2="228" y2="65" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+            <rect x="236" y="28" width="212" height="74" rx="12" fill="#153139" stroke="#02EFF0"/>
+            <text x="342" y="58" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">XxHash32(...) % 100</text>
+            <text x="342" y="80" text-anchor="middle" fill="#FFFFFF" font-size="13">Bucket 0..99 (stateless)</text>
+
+            <line x1="448" y1="65" x2="496" y2="65" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+            <rect x="504" y="18" width="182" height="42" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+            <text x="595" y="44" text-anchor="middle" fill="#81F7F7" font-size="13" font-weight="600">&lt; 20 → Flag ON (20%)</text>
+
+            <rect x="504" y="70" width="182" height="42" rx="10" fill="#0F282F" stroke="#2E464C"/>
+            <text x="595" y="96" text-anchor="middle" fill="#879497" font-size="13">&gt;= 20 → Flag OFF (80%)</text>
+          </svg>
+        </div>
+        <figcaption class="mt-2 text-xs text-storm-300">Deterministic rollout: <code class="ic">XxHash32(UserId + FlagKey) % 100 &lt; 20</code> always routes the same user to the same bucket without storing per-user rows.</figcaption>
+      </figure>
+
+      <div class="rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Senior interview talking point</p>
+        <p class="mt-2 text-white font-medium">Explaining cache invalidation, cache stampedes, and Optimistic vs. Pessimistic concurrency control in EF Core.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 4 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Blueprint 4 · FinTech RAG Pipeline</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">Contract &amp; Invoice Compliance Auditor</h4>
+          <p class="mt-2 text-storm-200">Freelancers or small teams upload contractor agreements and monthly invoices as Markdown, plain text, or PDF text. The system checks line items against contract caps, currency rules, and VAT/tax calculations and flags anomalies.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Backend (.NET 10) highlights</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">decimal</code></span>
+            <span class="chip"><code class="ic">MidpointRounding.ToEven</code></span>
+            <span class="chip">Transactional Outbox</span>
+            <span class="chip"><code class="ic">pgvector</code> + LLM Guard</span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">Financial precision:</strong> Strict use of C# <code class="ic">decimal</code> (never <code class="ic">double</code> or <code class="ic">float</code>) with <code class="ic">MidpointRounding.ToEven</code> (Banker's Rounding) for currency and tax math.</li>
+            <li><strong class="text-white">Transactional Outbox pattern:</strong> Saves the invoice and the audit event in the exact same EF Core transaction (<code class="ic">db.SaveChangesAsync</code>). Audit trails are never lost even if a background worker crashes.</li>
+            <li><strong class="text-white">Hybrid rule + AI guard:</strong> Deterministic C# rules verify math, dates, and IBAN/VAT formats. Then <code class="ic">pgvector</code> and the LLM check whether the invoice description matches the contract's "Scope of Work" clause.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Angular 20 highlights</p>
+          <p class="text-sm text-storm-200">Side-by-side contract clause highlighter and invoice line-item approval table using Angular Material table and Signals.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Senior interview talking point</p>
+        <p class="mt-2 text-white font-medium">Why floating-point numbers (<code class="ic">double</code>) fail in financial software, and how ACID transactions plus the Transactional Outbox pattern guarantee data consistency.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 5 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="activity" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">Blueprint 5 · Observability &amp; SLOs</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">Real-Time API Health, Latency &amp; SLO Incident Tracker</h4>
+          <p class="mt-2 text-storm-200">Monitors HTTP endpoints and Postgres databases on a schedule, calculates P50/P95/P99 latency and error budgets (SLOs), detects anomalies, and sends alerts to Telegram.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Backend (.NET 10) highlights</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">PeriodicTimer</code></span>
+            <span class="chip"><code class="ic">percentile_cont(0.95)</code></span>
+            <span class="chip">OpenTelemetry <code class="ic">ActivitySource</code></span>
+            <span class="chip">OpenTelemetry <code class="ic">Meter</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white"><code class="ic">PeriodicTimer</code> in <code class="ic">BackgroundService</code>:</strong> Modern async loop (<code class="ic">while (await timer.WaitForNextTickAsync(stoppingToken))</code>) that does not drift or overlap ticks.</li>
+            <li><strong class="text-white">Bulk inserts &amp; time-series partitioning:</strong> Batches ping results in memory for Postgres writes and computes P95 latency with SQL window functions (<code class="ic">percentile_cont(0.95)</code>).</li>
+            <li><strong class="text-white">OpenTelemetry integration:</strong> Emits custom <code class="ic">ActivitySource</code> traces and <code class="ic">Meter</code> histograms from .NET 10.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">Angular 20 highlights</p>
+          <p class="text-sm text-storm-200">Live uptime status badges, P95 latency charts, and incident timeline cards.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Senior interview talking point</p>
+        <p class="mt-2 text-white font-medium">How <code class="ic">PeriodicTimer</code> avoids the thread-pool starvation issues of legacy <code class="ic">System.Timers.Timer</code>, and how to keep Postgres fast when inserting millions of log rows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-09" data-toc="2.9 8 core topics" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.9</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">60-Second Answers · EF Core · Runtime · HTTP</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Interview cheat sheet</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Eight core .NET backend topics you must explain clearly in <mark class="hl">60 seconds each</mark>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="clock" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A 60-second interview answer is an emergency briefing. Name the runtime mechanism first, call out the production trap second, and state the fix third.</p>
+    </div>
+  </div>
+
+  <!-- Topic 1 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 1 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">1. <code class="ic">IQueryable&lt;T&gt;</code> vs. <code class="ic">IEnumerable&lt;T&gt;</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">IQueryable&lt;T&gt;</code> builds an Expression Tree</strong> (<code class="ic">Expression&lt;Func&lt;T, bool&gt;&gt;</code>) that EF Core translates into SQL to run on the database server.</p>
+        <p><strong class="text-coral-300"><code class="ic">IEnumerable&lt;T&gt;</code> runs delegates</strong> (<code class="ic">Func&lt;T, bool&gt;</code>) in C# memory. Converting to <code class="ic">IEnumerable</code> before filtering pulls the entire table over the network into RAM first.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 200" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>IQueryable filters rows inside PostgreSQL while IEnumerable pulls the whole table into C# RAM first</title>
+          <!-- Top lane: IQueryable<T> -->
+          <rect x="14" y="18" width="210" height="72" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="119" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">IQueryable&lt;T&gt; in Postgres</text>
+          <text x="119" y="70" text-anchor="middle" fill="#FFFFFF" font-size="13">SQL WHERE filters 100k → 5 rows</text>
+
+          <line x1="224" y1="54" x2="472" y2="54" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="348" y="44" text-anchor="middle" fill="#81F7F7" font-size="13">Only 5 matching rows travel</text>
+
+          <rect x="480" y="18" width="226" height="72" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="593" y="48" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">C# App Memory</text>
+          <text x="593" y="70" text-anchor="middle" fill="#81F7F7" font-size="13">Tiny RAM footprint</text>
+
+          <!-- Bottom lane: IEnumerable<T> -->
+          <rect x="14" y="112" width="210" height="72" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="119" y="142" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">IEnumerable&lt;T&gt; before filter</text>
+          <text x="119" y="164" text-anchor="middle" fill="#FFFFFF" font-size="13">SELECT * dumps all 100k rows</text>
+
+          <line x1="224" y1="148" x2="472" y2="148" stroke="#FF7A6B" stroke-width="5" marker-end="url(#arw-coral)"/>
+          <text x="348" y="138" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">Whole table pulled over network</text>
+
+          <rect x="480" y="112" width="226" height="72" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="593" y="142" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Filtered in C# RAM</text>
+          <text x="593" y="164" text-anchor="middle" fill="#FF7A6B" font-size="13">Func&lt;T, bool&gt; wastes RAM</text>
+        </svg>
+      </div>
+      <figcaption class="mt-2 text-xs text-storm-300">Keep filters on <code class="ic">IQueryable&lt;T&gt;</code> so Postgres does the filtering before bytes cross the network.</figcaption>
+    </figure>
+  </article>
+
+  <!-- Topic 2 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 2 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">2. <code class="ic">async</code> / <code class="ic">await</code> under the hood</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">async</code> does not spin up a new thread.</strong> The C# compiler rewrites your method into a state machine (<code class="ic">IAsyncStateMachine</code>).</p>
+        <p>While waiting for network or disk I/O (like Postgres or OpenRouter), the thread returns to the .NET Thread Pool to serve other HTTP requests. Always return <code class="ic">Task</code> or <code class="ic">Task&lt;T&gt;</code>.</p>
+      </div>
+    </div>
+
+    <ol class="relative border-l-2 border-storm-600 ml-3 space-y-4">
+      <li class="step ml-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+        <p class="font-semibold text-white">Start I/O and reach <code class="ic">await</code></p>
+        <p class="text-sm text-storm-300"><code class="ic">IAsyncStateMachine</code> records current local variables and registers a continuation.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+        <p class="font-semibold text-white">Thread returns to the .NET Thread Pool</p>
+        <p class="text-sm text-storm-300">Zero thread blocked while Postgres or OpenRouter processes the request.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+        <p class="font-semibold text-white">I/O completes → state machine resumes</p>
+        <p class="text-sm text-storm-300">A pool thread picks up the next state and completes the returned <code class="ic">Task&lt;T&gt;</code>.</p>
+      </li>
+    </ol>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 1: <code class="ic">.Result</code> or <code class="ic">.Wait()</code></p>
+        <p class="mt-2 text-white font-semibold">Thread-pool starvation &amp; deadlocks</p>
+        <p class="mt-1 text-sm text-storm-200">Blocking a thread synchronously while waiting for an async task causes sync-over-async deadlocks and starves the thread pool.</p>
+      </div>
+      <div class="rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap 2: <code class="ic">async void</code></p>
+        <p class="mt-2 text-white font-semibold">Exceptions crash the whole process</p>
+        <p class="mt-1 text-sm text-storm-200">Callers cannot await <code class="ic">async void</code> or catch its exceptions. Always return <code class="ic">Task</code> or <code class="ic">Task&lt;T&gt;</code>.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- Topic 3 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 3 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">3. <code class="ic">ValueTask&lt;T&gt;</code> vs. <code class="ic">Task&lt;T&gt;</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">Task&lt;T&gt;</code> is a reference type</strong> that allocates on the heap unless cached. <strong class="text-vivid-300"><code class="ic">ValueTask&lt;T&gt;</code> is a <code class="ic">struct</code></strong>.</p>
+        <p>Use <code class="ic">ValueTask&lt;T&gt;</code> on hot paths where the result is usually available synchronously (such as hitting an in-memory cache 99% of the time). Never await a <code class="ic">ValueTask&lt;T&gt;</code> more than once.</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-left">
+          <tr>
+            <th class="p-4 font-medium text-storm-300 w-1/4">Feature</th>
+            <th class="p-4 font-semibold text-white"><code class="ic">Task&lt;T&gt;</code></th>
+            <th class="p-4 font-semibold text-vivid-300"><code class="ic">ValueTask&lt;T&gt;</code></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 text-storm-300">C# type</td>
+            <td class="p-4 text-storm-100">Reference type (<code class="ic">class</code>)</td>
+            <td class="p-4 text-vivid-300">Value type (<code class="ic">struct</code>)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">Sync completion cost</td>
+            <td class="p-4 text-coral-300">Allocates on the heap (unless cached)</td>
+            <td class="p-4 text-vivid-300">Zero heap allocation</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">When to use</td>
+            <td class="p-4 text-storm-100">Default for normal async I/O methods</td>
+            <td class="p-4 text-storm-100">Hot paths that hit an in-memory cache ~99% of the time</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">Consumption rule</td>
+            <td class="p-4 text-storm-100">Can be awaited multiple times</td>
+            <td class="p-4 text-coral-300">Do not <code class="ic">await</code> more than once</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <!-- Topic 4 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 4 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">4. Garbage Collection (GC) &amp; memory generations</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">.NET divides the managed heap into Gen 0, Gen 1, Gen 2, and the Large Object Heap (LOH).</strong> Gen 0 holds short-lived HTTP request DTOs, Gen 1 acts as a buffer, and Gen 2 holds long-lived Singletons. The LOH stores objects <code class="ic">&gt;= 85,000</code> bytes, such as huge arrays or giant strings.</p>
+        <p>Gen 0 collections are sub-millisecond, while LOH and Gen 2 collections are expensive. Avoid allocating huge strings or arrays repeatedly in loops; use <code class="ic">ArrayPool&lt;T&gt;</code>, <code class="ic">Span&lt;T&gt;</code>, or streaming instead.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-2 text-center">
+      <div class="w-[48%] rounded-xl bg-vivid-400 text-storm-900 py-3 px-4 font-semibold">Gen 0 · Short-lived HTTP DTOs · Sub-millisecond GC</div>
+      <div class="w-[64%] rounded-xl bg-vivid-400/70 text-storm-900 py-3 px-4 font-semibold">Gen 1 · Buffer between Gen 0 and Gen 2</div>
+      <div class="w-[82%] rounded-xl bg-storm-700 text-white py-3 px-4 font-semibold">Gen 2 · Long-lived Singletons · Expensive collection</div>
+      <div class="w-full rounded-xl border border-coral-400/60 bg-coral-500/15 text-coral-200 py-3 px-4 font-semibold">Large Object Heap (LOH) · Objects &gt;= 85,000 bytes · Expensive collection</div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-xs uppercase tracking-[.2em] text-vivid-300 font-semibold mr-2">Zero-LOH tools:</span>
+      <span class="chip"><code class="ic">ArrayPool&lt;T&gt;</code></span>
+      <span class="chip"><code class="ic">Span&lt;T&gt;</code></span>
+      <span class="chip">Streaming I/O</span>
+    </div>
+  </article>
+
+  <!-- Topic 5 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 5 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">5. Tracking vs. <code class="ic">AsNoTracking()</code> in EF Core</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Default queries attach entities to the <code class="ic">ChangeTracker</code></strong> so <code class="ic">SaveChangesAsync()</code> knows which columns changed.</p>
+        <p>For <code class="ic">GET</code> endpoints that only serialize to JSON, always add <code class="ic">.AsNoTracking()</code> to skip snapshot allocation.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-2xl border border-coral-400/40 bg-storm-900 p-5">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Default tracked query on <code class="ic">GET</code></p>
+        <p class="mt-2 text-sm text-storm-200">Attaches every entity to <code class="ic">ChangeTracker</code> and allocates original-value snapshots in memory.</p>
+        <p class="mt-2 text-xs font-mono text-coral-300">→ only needed before SaveChangesAsync()</p>
+      </div>
+      <div class="rounded-2xl border border-vivid-400/50 bg-storm-900 p-5">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> <code class="ic">.AsNoTracking()</code> on <code class="ic">GET</code></p>
+        <p class="mt-2 text-sm text-storm-200">Skips <code class="ic">ChangeTracker</code> snapshot allocation and streams rows straight to JSON serialization.</p>
+        <p class="mt-2 text-xs font-mono text-vivid-300">→ lower memory and faster read endpoints</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- Topic 6 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 6 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">6. The N+1 query problem</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">What happens:</strong> You load 50 <code class="ic">Applications</code> in 1 query and then loop over them to query each application's <code class="ic">Analysis</code> separately. That loop turns 1 query into 1 + 50 = 51 database round-trips.</p>
+        <p><strong class="text-vivid-300">The fix:</strong> Batch related rows in one query with <code class="ic">WHERE application_id = ANY(...)</code> (<code class="ic">pageIds.Contains(a.ApplicationId)</code> in <code class="ic">ApplicationService.cs</code>, lines 75–83). You can also use <code class="ic">.Include(...)</code> or a <code class="ic">.Select(...)</code> projection.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
+      <figcaption class="text-sm font-semibold text-white">Database round-trips to load 50 applications and their analyses</figcaption>
+      <div data-chart class="mt-4 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+          <span class="text-sm text-storm-200">N+1 loop (1 + 50)</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="51"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">51 trips</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+          <span class="text-sm text-storm-200">Batched query</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">2 trips</span>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-storm-400">Batching with <code class="ic">pageIds.Contains(a.ApplicationId)</code> (<code class="ic">WHERE application_id = ANY(...)</code>), <code class="ic">.Include(...)</code>, or <code class="ic">.Select(...)</code> collapses 50 extra round-trips.</p>
+    </figure>
+  </article>
+
+  <!-- Topic 7 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 7 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">7. Middleware order in <code class="ic">Program.cs</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Middleware runs as a Russian-doll pipeline (first in, last out).</strong></p>
+        <p><code class="ic">UseExceptionHandler()</code> must sit at the very top so it catches exceptions thrown by everything nested inside it: <code class="ic">UseCors()</code>, <code class="ic">UseAuthentication()</code>, <code class="ic">UseAuthorization()</code>, and your endpoints.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 260" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Russian-doll middleware order with UseExceptionHandler outermost, then UseCors, UseAuthentication, UseAuthorization, and Endpoints innermost</title>
+          <rect x="16" y="14" width="688" height="232" rx="22" fill="#0F282F" stroke="#02EFF0" stroke-width="2"/>
+          <text x="360" y="38" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">1. UseExceptionHandler() · Outermost (first in, last out)</text>
+
+          <rect x="56" y="50" width="608" height="180" rx="18" fill="#153139" stroke="#2E464C"/>
+          <text x="360" y="74" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">2. UseCors()</text>
+
+          <rect x="96" y="86" width="528" height="128" rx="14" fill="#0F282F" stroke="#2E464C"/>
+          <text x="360" y="110" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">3. UseAuthentication()</text>
+
+          <rect x="140" y="122" width="440" height="76" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="360" y="144" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">4. UseAuthorization()</text>
+
+          <rect x="200" y="154" width="320" height="34" rx="8" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="360" y="176" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="700">5. Minimal API Endpoints</text>
+        </svg>
+      </div>
+      <figcaption class="mt-2 text-xs text-storm-300">Because <code class="ic">UseExceptionHandler()</code> wraps every inner layer, any unhandled exception bubbles up into standard error handling.</figcaption>
+    </figure>
+  </article>
+
+  <!-- Topic 8 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · 8 of 8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">8. RFC 7807 <code class="ic">ProblemDetails</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Standardize every error response.</strong> Instead of inventing custom <code class="ic">{ error: true, msg: "..." }</code> shapes per endpoint, senior APIs register <code class="ic">builder.Services.AddProblemDetails()</code> and return <code class="ic">Results.Problem(...)</code>.</p>
+        <p>Frontend interceptors like Angular's <code class="ic">HttpInterceptorFn</code> then rely on one predictable RFC 7807 JSON contract across the entire app.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="Sample 409 response (RFC 7807)" data-lang="json" data-hl="2-6"><code>{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Concurrency conflict",
+  "status": 409,
+  "detail": "The record was modified by another user.",
+  "instance": "/api/applications/42"
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">AddProblemDetails()</code> and <code class="ic">Results.Problem(...)</code> emit the five standard RFC 7807 fields: <code class="ic">type</code>, <code class="ic">title</code>, <code class="ic">status</code>, <code class="ic">detail</code>, and <code class="ic">instance</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Angular's <code class="ic">HttpInterceptorFn</code> parses one error shape across every route instead of guessing custom fields.</span></li>
+      </ul>
+    </div>
+  </article>
+</section>

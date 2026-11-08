@@ -1,0 +1,15 @@
+{
+  "name": "senior-stack-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A visual guide to senior engineering with Express 5, .NET 10, React 19 and Next.js 16.",
+  "scripts": {
+    "build:html": "python3 src/build.py",
+    "build:css": "tailwindcss -c tailwind.config.js -i src/styles.css -o assets/site.css --minify",
+    "build": "npm run build:html && npm run build:css",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.16"
+  }
+}

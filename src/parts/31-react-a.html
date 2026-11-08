@@ -1,0 +1,961 @@
+<section id="rx-01" data-toc="3.1 Rendering &amp; state" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.1</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Functions · Snapshots · Pure Render · Keys</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Rendering and state</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">A React component is not a living class instance. It is a <mark class="hl">pure function call</mark> that turns current props and state into UI.</p>
+  </header>
+
+  <div class="reveal rounded-3xl border border-vivid-400/40 bg-storm-900 p-6 md:p-8 text-center">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">The core formula</p>
+    <p class="mt-3 font-mono text-3xl sm:text-4xl md:text-5xl font-semibold text-vivid-400 tracking-tight">UI = f(props, state)</p>
+    <p class="mt-3 text-sm md:text-base text-storm-200 max-w-2xl mx-auto">Every time state changes, React calls your function again from top to bottom.</p>
+  </div>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="camera" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A React component is a photo booth. It prints a brand-new photo on each change instead of taking a pen to edit the old photo.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">A function call, not a class instance</h4>
+    <p class="text-storm-200 max-w-3xl">Local variables declared with <code class="ic">const</code> or <code class="ic">let</code> are created fresh on every render. Event handlers close over (capture) the <code class="ic">props</code> and <code class="ic">state</code> from that specific render.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit: Class instance</p>
+        <p class="mt-3 text-storm-200">Angular calls <code class="ic">new MyComponent()</code> once, mutates <code class="ic">this.someProperty</code> over time, and checks the template when signals or zone events fire.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ one mutable object lives for the whole lifetime</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React way: Function snapshot</p>
+        <p class="mt-3 text-storm-200">React runs your function again on every state change. Local variables are fresh and disappear when the function returns.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ handlers capture that render's exact values</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Three renders as three separate snapshots, each with its own const values and closure</title>
+          <rect x="12" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="112" y="55" text-anchor="middle" fill="#81F7F7" font-size="14" font-weight="600">Render #1 snapshot</text>
+          <text x="30" y="88" fill="#FFFFFF" font-size="13">const count = 0;</text>
+          <text x="30" y="114" fill="#FFFFFF" font-size="13">const text = "0 items";</text>
+          <rect x="26" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="112" y="157" text-anchor="middle" fill="#879497" font-size="13">onClick captures count=0</text>
+
+          <line x1="212" y1="108" x2="254" y2="108" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="233" y="96" text-anchor="middle" fill="#02EFF0" font-size="13">set(1)</text>
+
+          <rect x="260" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="360" y="55" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Render #2 snapshot</text>
+          <text x="278" y="88" fill="#FFFFFF" font-size="13">const count = 1;</text>
+          <text x="278" y="114" fill="#FFFFFF" font-size="13">const text = "1 item";</text>
+          <rect x="274" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="360" y="157" text-anchor="middle" fill="#81F7F7" font-size="13">onClick captures count=1</text>
+
+          <line x1="460" y1="108" x2="502" y2="108" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="481" y="96" text-anchor="middle" fill="#02EFF0" font-size="13">set(2)</text>
+
+          <rect x="508" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="608" y="55" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Render #3 snapshot</text>
+          <text x="526" y="88" fill="#FFFFFF" font-size="13">const count = 2;</text>
+          <text x="526" y="114" fill="#FFFFFF" font-size="13">const text = "2 items";</text>
+          <rect x="522" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="608" y="157" text-anchor="middle" fill="#81F7F7" font-size="13">onClick captures count=2</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Each render creates its own fresh <code class="ic">const</code> values. Nothing is mutated in place across renders.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">State is immutable and compared with Object.is</h4>
+    <p class="text-storm-200 max-w-3xl">React checks whether state changed by comparing the old and new references with <code class="ic">Object.is(oldState, newState)</code>.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap · Angular habit that breaks</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">toasts.push(newItem); setToasts(toasts)</code></p>
+      <p class="mt-1 text-sm text-storm-200">The array reference did not change, so <code class="ic">Object.is(oldArray, newArray) === true</code>. React thinks nothing changed and skips re-rendering.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/toast/toast-provider.tsx" data-lang="ts" data-hl="5"><code>const [toasts, setToasts] = useState&lt;ToastItem[]&gt;([]);
+
+const toast = useCallback&lt;ShowToast&gt;((message, tone = "success") =&gt; {
+  const id = nextId.current++;
+  setToasts((current) =&gt; [...current, { id, message, tone }]);
+}, []);</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">[...current, { id, message, tone }]</code> allocates a new array so <code class="ic">Object.is</code> sees a new reference.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">current =&gt; ...</code> reads the latest queued array instead of a stale closure.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">When two events fire in the same tick, <code class="ic">setToasts(current =&gt; ...)</code> guarantees the second update appends to the first update's array.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Derived values: compute during render</h4>
+    <p class="text-storm-200 max-w-3xl">When a value comes from props or state, calculate it right inside the function body. Do not put it in <code class="ic">useState</code> or <code class="ic">useEffect</code>.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/issue-filters.tsx" data-lang="ts" data-hl="2"><code>// Derived value: computed while rendering, from props. Not state, not an Effect.
+const hasFilters = Boolean(search.q || search.status || search.assignee);</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">hasFilters</code> runs on every render and can never go out of sync with <code class="ic">search</code>.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit: <code class="ic">computed()</code></p>
+        <p class="mt-3 text-storm-200">In Angular, the class instance runs once, so you wrap derived state in <code class="ic">computed(() =&gt; ...)</code> to track signal changes.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React way: Plain <code class="ic">const</code></p>
+        <p class="mt-3 text-storm-200">Your component function already runs on every render. A plain <code class="ic">const</code> variable is fast and needs no wrapper.</p>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea · React Compiler</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">Next Issue Tracker enables <code class="ic">reactCompiler: true</code> in <code class="ic">next.config.ts</code> (<code class="ic">docs/adr/0003-react-compiler.md</code>). At build time, the compiler caches derived values and JSX nodes automatically, without manual <code class="ic">useMemo</code>, <code class="ic">useCallback</code>, or <code class="ic">React.memo</code>.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The pure render rule</h4>
+    <p class="text-storm-200 max-w-3xl">React and the React Compiler can call your component multiple times or cache its output. Rendering must stay pure.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="ban" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Don't mutate outside</p>
+        <p class="mt-1 text-sm text-storm-300">Never change variables outside the component function while rendering.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="clock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Don't call impure APIs in render</p>
+        <p class="mt-1 text-sm text-storm-300">Never call <code class="ic">Date.now()</code>, <code class="ic">new Date()</code>, or <code class="ic">Math.random()</code> during render or inside a state reducer.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="circle-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Do impure work in handlers</p>
+        <p class="mt-1 text-sm text-storm-300">Event handlers like <code class="ic">submit</code> are not render—they can call <code class="ic">new Date()</code> and pass the value in.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/comments/components/comment-thread.tsx" data-lang="ts" data-hl="9,19"><code>const [visible, addOptimistic] = useOptimistic&lt;CommentView[], OptimisticComment&gt;(
+  comments,
+  (current, { body, at }) =&gt; [
+    ...current,
+    {
+      id: `pending-${current.length}`,
+      body,
+      author: { id: "me", name: currentUserName },
+      createdAt: at, // Uses `at` passed in, NOT `new Date()` inside the reducer!
+      updatedAt: at,
+      viewerCan: { edit: false, delete: false },
+      pending: true,
+    },
+  ],
+);
+
+function submit(formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  if (body) addOptimistic({ body, at: new Date() });
+  return dispatch(formData);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">submit()</code> is an event handler, so creating <code class="ic">new Date()</code> there is safe.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">The <code class="ic">useOptimistic</code> reducer runs during render and stays pure by reading <code class="ic">at</code>.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Syncing state when props change: key vs render-time setState</h4>
+    <p class="text-storm-200 max-w-3xl">Instead of Angular's <code class="ic">ngOnChanges</code>, React gives you two patterns: change <code class="ic">key</code> to reset the whole component, or call <code class="ic">setState</code> during render to adjust specific fields.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit: <code class="ic">ngOnChanges</code></p>
+        <p class="mt-3 text-storm-200">Wait for an <code class="ic">@Input()</code> lifecycle hook and manually overwrite internal fields on the existing class instance.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React way: <code class="ic">key</code> or render guard</p>
+        <p class="mt-3 text-storm-200">Pass a new <code class="ic">key</code> to remount a clean instance, or update state inside an <code class="ic">if (prop !== seenProp)</code> guard during render.</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Pattern A · Why <code class="ic">IssueForm</code> needs a <code class="ic">key</code> with Next.js 16 <code class="ic">&lt;Activity&gt;</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">Uncontrolled mount</p>
+          <p class="text-xs text-storm-300"><code class="ic">IssueForm</code> sets <code class="ic">defaultValue={v.title}</code> on first mount only.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">Hidden by <code class="ic">&lt;Activity&gt;</code></p>
+          <p class="text-xs text-storm-300">Next.js 16 keeps visited pages mounted in the DOM for instant Back.</p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">03 · without key</p>
+          <p class="font-semibold text-white">Stale DOM input</p>
+          <p class="text-xs text-storm-300">Re-opening Edit reveals the same <code class="ic">IssueForm</code> with old DOM text.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04 · with key</p>
+          <p class="font-semibold text-white">Fresh remount</p>
+          <p class="text-xs text-storm-300">New <code class="ic">updatedAt</code> key destroys the old form and mounts a new one.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app/(app)/projects/[projectKey]/issues/[number]/edit/page.tsx" data-lang="ts" data-hl="2"><code>&lt;IssueForm
+  key={issue.updatedAt.toISOString()}
+  action={updateIssueAction.bind(null, issue.id)}
+  defaults={{
+    title: issue.title,
+    // ...
+  }}
+/&gt;</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">When the saved issue gets a new <code class="ic">updatedAt</code> timestamp, React unmounts the old <code class="ic">IssueForm</code> and mounts a fresh one with the new <code class="ic">defaultValue</code>s.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/search-box.tsx" data-lang="ts" data-hl="5-11"><code>const [value, setValue] = useState(defaultValue);
+const [sent, setSent] = useState(defaultValue);
+const [seenUrlValue, setSeenUrlValue] = useState(defaultValue);
+
+if (defaultValue !== seenUrlValue) {
+  setSeenUrlValue(defaultValue);
+  if (defaultValue !== sent) {
+    setValue(defaultValue);
+    setSent(defaultValue);
+  }
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">Pattern B keeps <code class="ic">SearchBox</code> mounted so the user never loses input focus while typing.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">When external navigation (like "Clear filters" or Back) changes <code class="ic">defaultValue</code>, React updates <code class="ic">value</code> during render before painting.</span></li>
+      </ul>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Timeline comparing useEffect state sync (two paints with a stale flash) against setState during render (one clean paint)</title>
+          <text x="16" y="34" fill="#FF7A6B" font-size="14" font-weight="600">Anti-pattern: setState inside useEffect (2 paints, visual flash)</text>
+          <rect x="16" y="48" width="150" height="54" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="91" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">1. Render stale</text>
+          <text x="91" y="91" text-anchor="middle" fill="#879497" font-size="13">old value in JSX</text>
+          <line x1="166" y1="75" x2="196" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="204" y="48" width="160" height="54" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="284" y="72" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">2. Paint stale DOM</text>
+          <text x="284" y="91" text-anchor="middle" fill="#879497" font-size="13">user sees old text</text>
+          <line x1="364" y1="75" x2="394" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="402" y="48" width="140" height="54" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="472" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">3. useEffect runs</text>
+          <text x="472" y="91" text-anchor="middle" fill="#879497" font-size="13">calls setValue()</text>
+          <line x1="542" y1="75" x2="572" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="580" y="48" width="144" height="54" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="652" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">4. 2nd Render</text>
+          <text x="652" y="91" text-anchor="middle" fill="#879497" font-size="13">paints a 2nd time</text>
+
+          <text x="16" y="142" fill="#02EFF0" font-size="14" font-weight="600">Pattern B: setState during render (1 paint, zero flash)</text>
+          <rect x="16" y="156" width="195" height="54" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="113" y="180" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">1. Render sees new prop</text>
+          <text x="113" y="199" text-anchor="middle" fill="#81F7F7" font-size="13">calls setSeenUrlValue()</text>
+          <line x1="211" y1="183" x2="251" y2="183" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <rect x="259" y="156" width="215" height="54" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="366" y="180" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">2. Drops JSX &amp; re-runs</text>
+          <text x="366" y="199" text-anchor="middle" fill="#879497" font-size="13">before touching DOM</text>
+          <line x1="474" y1="183" x2="514" y2="183" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <rect x="522" y="156" width="202" height="54" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="623" y="180" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">3. Single DOM Paint</text>
+          <text x="623" y="199" text-anchor="middle" fill="#81F7F7" font-size="13">fresh UI on first paint</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Calling <code class="ic">setState</code> inside a render condition makes React discard the stale pass immediately and paint only once. React re-runs <code class="ic">SearchBox</code> before rendering its children, so there is no <code class="ic">ExpressionChangedAfterItHasBeenCheckedError</code> and no flash of stale text.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why is copying props to state inside <code class="ic">useEffect</code> an anti-pattern, and what are the three right ways to handle prop-derived data?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Why it hurts:</strong> Calling <code class="ic">setState(prop)</code> inside <code class="ic">useEffect</code> makes React finish a full render and paint stale state first. It then immediately triggers a second render pass.</p>
+        <p><strong class="text-vivid-300">1. Compute during render:</strong> If the value comes from props or state, calculate it as a plain variable during render (like <code class="ic">hasFilters</code> in <code class="ic">IssueFilters</code>).</p>
+        <p><strong class="text-vivid-300">2. Reset all state with <code class="ic">key</code>:</strong> Pass a new <code class="ic">key</code> when an ID or version changes and you want a clean slate. <code class="ic">IssueForm</code> uses <code class="ic">key={issue.updatedAt.toISOString()}</code>.</p>
+        <p><strong class="text-vivid-300">3. Adjust specific state during render:</strong> To update only some fields while keeping focus in <code class="ic">SearchBox</code>, keep the component mounted. Call <code class="ic">setState</code> during render inside <code class="ic">if (prop !== prevProp)</code>.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">With React Compiler enabled, do I still need to care about immutability or pure rendering?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Yes, even more than before.</strong> React Compiler automatically memoizes values and JSX blocks using reference equality (<code class="ic">Object.is</code>) and assumes your render function has no side effects.</p>
+        <p>Never mutate an array in place or call impure functions like <code class="ic">new Date()</code> during render. Otherwise, the compiler may skip re-computing a block and leave stale UI on screen.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-02" data-toc="3.2 Effects" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.2</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">useEffect · useEffectEvent · Refs · Hydration</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Effects and external systems</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">An Effect is only for <mark class="hl">synchronizing with an external system</mark>—a DOM listener, timer, WebSocket, or non-React widget.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="plug" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug"><code class="ic">useEffect</code> is a travel plug adapter. You only need it at the border between your device and a foreign wall socket.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The golden rule of useEffect</h4>
+    <p class="text-storm-200 max-w-3xl">If no external system is involved, you do not need <code class="ic">useEffect</code>.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular habit: <code class="ic">effect()</code> / <code class="ic">ngOnInit</code></p>
+        <p class="mt-3 text-storm-200">Using <code class="ic">effect()</code> or <code class="ic">ngOnInit</code> to react to state changes or compute derived component fields.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React way: Border sync only</p>
+        <p class="mt-3 text-storm-200">Reserve <code class="ic">useEffect</code> strictly for browser DOM listeners, <code class="ic">setTimeout</code>/<code class="ic">setInterval</code>, WebSockets, or non-React widgets.</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Decision flow · Do I need <code class="ic">useEffect</code>?</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01 · check</p>
+          <p class="font-semibold text-white">Is there an external system?</p>
+          <p class="text-xs text-storm-300">DOM listener, timer, WebSocket, or non-React widget?</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02 · if no</p>
+          <p class="font-semibold text-white">Stay in React</p>
+          <p class="text-xs text-storm-300">Compute in render (<code class="ic">const</code>) or run in an event handler.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03 · if yes</p>
+          <p class="font-semibold text-white">Use <code class="ic">useEffect</code> + cleanup</p>
+          <p class="text-xs text-storm-300">Subscribe on setup and undo it in the returned cleanup function.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Subscribing to DOM events with useEffectEvent</h4>
+    <p class="text-storm-200 max-w-3xl">Callers pass an inline arrow function <code class="ic">useHotkey("/", (e) =&gt; { ... })</code> that creates a new function reference on every render. <code class="ic">useEffectEvent</code> (React 19.2+) reads the latest <code class="ic">handler</code> without re-subscribing the DOM listener.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/hooks/use-hotkey.ts" data-lang="ts" data-hl="5,13-15"><code>export function useHotkey(
+  key: string,
+  handler: (event: KeyboardEvent) =&gt; void,
+) {
+  const onKey = useEffectEvent(handler);
+
+  useEffect(() =&gt; {
+    function listener(event: KeyboardEvent) {
+      if (event.key !== key || event.metaKey || event.ctrlKey || event.altKey)
+        return;
+      if (isTyping(event.target)) return;
+      onKey(event);
+    }
+    document.addEventListener("keydown", listener);
+    return () =&gt; document.removeEventListener("keydown", listener);
+  }, [key]);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">useEffectEvent(handler)</code> always calls the latest <code class="ic">handler</code> while keeping <code class="ic">handler</code> out of the <code class="ic">[key]</code> dependency array.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Returning <code class="ic">() =&gt; document.removeEventListener(...)</code> removes the listener on unmount or when <code class="ic">key</code> changes.</span></li>
+      </ul>
+    </div>
+
+    <ol class="reveal relative border-l-2 border-storm-600 ml-3 space-y-6">
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+        <p class="font-semibold text-white">Setup runs on mount</p>
+        <p class="text-sm text-storm-300">React calls <code class="ic">document.addEventListener("keydown", listener)</code>.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+        <p class="font-semibold text-white">Strict Mode cleanup check (development only)</p>
+        <p class="text-sm text-storm-300">React simulates an unmount right away and calls <code class="ic">removeEventListener</code> to expose missing cleanups.</p>
+      </li>
+      <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+        <p class="font-semibold text-white">Setup runs a second time</p>
+        <p class="text-sm text-storm-300">Verified in <code class="ic">use-hotkey.test.tsx</code>: only one listener stays registered after <code class="ic">setup → cleanup → setup</code>.</p>
+      </li>
+    </ol>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">Example: DOM listener subscriptions across 10 keystrokes (inline arrow handler)</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">[key, handler]</code> deps</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="10"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">10 binds</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">1 bind</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">Without <code class="ic">useEffectEvent</code>, React removes and re-adds the <code class="ic">document</code> listener on every keystroke.</p>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The latest-ref pattern for timers</h4>
+    <p class="text-storm-200 max-w-3xl">When a <code class="ic">setTimeout</code> starts inside an event handler instead of inside <code class="ic">useEffect</code>, store the latest callback in a <code class="ic">useRef</code> box.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/hooks/use-debounced-callback.ts" data-lang="ts" data-hl="5-10,16-17"><code>export function useDebouncedCallback&lt;Args extends unknown[]&gt;(
+  fn: (...args: Args) =&gt; void,
+  delayMs: number,
+) {
+  const latest = useRef(fn);
+  const timer = useRef&lt;ReturnType&lt;typeof setTimeout&gt; | undefined&gt;(undefined);
+
+  useEffect(() =&gt; {
+    latest.current = fn;
+  });
+
+  useEffect(() =&gt; () =&gt; clearTimeout(timer.current), []);
+
+  return useCallback(
+    (...args: Args) =&gt; {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() =&gt; latest.current(...args), delayMs);
+    },
+    [delayMs],
+  );
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">latest.current = fn</code> updates inside an Effect after each commit.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">When the timer fires after <code class="ic">delayMs</code> (for example 300 ms), it calls <code class="ic">latest.current(...args)</code> with fresh props and state.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="box" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Why <code class="ic">useRef</code>?</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">{ current: value }</code> is a mutable box that persists across renders without triggering a re-render when <code class="ic">.current</code> changes.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Why not <code class="ic">useEffectEvent</code>?</p>
+        <p class="mt-1 text-sm text-storm-300">Effect Events can only be called from inside <code class="ic">useEffect</code>. Here, the timer starts inside a caller event handler (<code class="ic">onChange</code>).</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="triangle-alert" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Why not write <code class="ic">latest.current</code> in render?</p>
+        <p class="mt-1 text-sm text-storm-300">Concurrent React can start a render, abandon it, or render out of order. Mutating a ref during render breaks purity.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Hydration-safe browser values with useSyncExternalStore</h4>
+    <p class="text-storm-200 max-w-3xl">The server formats dates in UTC while the browser uses the user's timezone (for example <code class="ic">+04:00</code>). Calling <code class="ic">date.toLocaleString()</code> directly in render gives <code class="ic">14:00 UTC</code> on the server and <code class="ic">18:00</code> in the browser, which is a React hydration mismatch. <code class="ic">useSyncExternalStore</code> keeps the server HTML and initial hydration pass identical before switching to local time.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Server renders UTC, client hydration renders matching UTC, then post-hydration switches to local time +04:00</title>
+          <rect x="14" y="42" width="205" height="130" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="116" y="72" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">1. Server SSR (UTC)</text>
+          <text x="116" y="96" text-anchor="middle" fill="#879497" font-size="13">calls 3rd arg (server)</text>
+          <rect x="34" y="114" width="165" height="38" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="116" y="138" text-anchor="middle" fill="#81F7F7" font-size="14" font-weight="600">14:00 UTC</text>
+
+          <line x1="219" y1="107" x2="251" y2="107" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="259" y="42" width="205" height="130" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="361" y="72" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">2. Client Hydration</text>
+          <text x="361" y="96" text-anchor="middle" fill="#879497" font-size="13">also calls 3rd arg (UTC)</text>
+          <rect x="279" y="114" width="165" height="38" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="361" y="138" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">14:00 UTC (matches!)</text>
+
+          <line x1="464" y1="107" x2="496" y2="107" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="504" y="42" width="202" height="130" rx="16" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="605" y="72" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">3. After Hydration</text>
+          <text x="605" y="96" text-anchor="middle" fill="#879497" font-size="13">calls 2nd arg (client)</text>
+          <rect x="524" y="114" width="162" height="38" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="605" y="138" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">18:00 (+04:00)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Both server rendering and initial hydration read the 3rd argument, so HTML matches 100% before switching to the 2nd argument.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/local-time.tsx" data-lang="ts" data-hl="4-8"><code>const subscribe = () =&gt; () =&gt; {};
+
+export function LocalTime({ date }: { date: Date }) {
+  const text = useSyncExternalStore(
+    subscribe,
+    () =&gt; formatLocalDateTime(date), // 2nd arg: Client snapshot (after hydration)
+    () =&gt; formatDateTime(date),      // 3rd arg: Server &amp; hydration snapshot (UTC)
+  );
+  return &lt;time dateTime={date.toISOString()}&gt;{text}&lt;/time&gt;;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">The 3rd argument (<code class="ic">formatDateTime</code>) runs on the server and during the initial client hydration pass.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Right after hydration completes, React switches to the 2nd argument (<code class="ic">formatLocalDateTime</code>).</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Old <code class="ic">useState("")</code> + <code class="ic">useEffect</code></p>
+        <p class="mt-3 text-storm-200">Renders an empty string <code class="ic">""</code> on the server, leaving blank timestamps in SSR HTML and causing a layout shift after load.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> <code class="ic">useSyncExternalStore</code></p>
+        <p class="mt-3 text-storm-200">Renders a real UTC timestamp in SSR HTML, hydrates with zero mismatch, and upgrades in place to the local timezone.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">In development, my <code class="ic">useEffect</code> runs twice when the component mounts. Is that a bug, and how should I handle it?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">It is intentional behavior from React <code class="ic">&lt;StrictMode&gt;</code>.</strong> React simulates unmounting and remounting every component in development (<code class="ic">setup → cleanup → setup</code>) to verify that your cleanup function undoes <code class="ic">setup</code>.</p>
+        <p>Never block the second run with a <code class="ic">useRef(false)</code> guard. Instead, write a proper cleanup function such as <code class="ic">removeEventListener</code>, <code class="ic">clearTimeout</code>, or <code class="ic">abortController.abort()</code>.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">How do you avoid hydration mismatches when rendering browser-only data like <code class="ic">window.innerWidth</code>, <code class="ic">localStorage</code>, or user timezone?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Use <code class="ic">useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)</code>.</strong></p>
+        <p>Provide a deterministic server fallback in <code class="ic">getServerSnapshot</code> (used during SSR and initial hydration) and read the browser API in <code class="ic">getClientSnapshot</code> right after hydration completes.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-03" data-toc="3.3 Donut pattern" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.3</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Server &amp; Client · Donut Pattern · Context · useId</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Composition and the donut pattern</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">A Client Component can wrap <mark class="hl">Server Components passed as children</mark> without adding them to the browser bundle.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="frame" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A Client Component is a picture frame with a dimmer switch. A Server Component is a printed photo slid inside the frame.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The server/client boundary and the donut pattern</h4>
+    <p class="text-storm-200 max-w-3xl">In Next.js App Router, every component is a Server Component by default unless the file starts with <code class="ic">"use client"</code>. Server Components run only on the server, can <code class="ic">await</code> database queries directly, and add <code class="ic">0 KB JS</code> to the browser bundle.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="triangle-alert" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Rule 1 · Imports become client code</p>
+        <p class="mt-1 text-sm text-storm-300">Any module directly <em>imported</em> by a <code class="ic">"use client"</code> file is bundled into client JavaScript.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">Rule 2 · The Donut escape hatch</p>
+        <p class="mt-1 text-sm text-storm-300">A <code class="ic">"use client"</code> component can accept Server Components as <code class="ic">children</code> (or any JSX prop) while keeping them on the server.</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 290" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Donut composition in ProjectPage: Client rings wrap Server components passed through children slots</title>
+          <rect x="14" y="14" width="712" height="262" rx="20" fill="#0F282F" stroke="#2E464C"/>
+          <text x="34" y="42" fill="#FFFFFF" font-size="15" font-weight="600">IssueListView (Server Component · 0 KB JS)</text>
+
+          <rect x="34" y="58" width="672" height="200" rx="18" fill="#153139" stroke="#02EFF0" stroke-width="2"/>
+          <text x="54" y="84" fill="#02EFF0" font-size="14" font-weight="600">ListPendingProvider ("use client" ring · owns useTransition)</text>
+
+          <rect x="54" y="100" width="295" height="140" rx="14" fill="#0F282F" stroke="#2E464C"/>
+          <text x="201" y="126" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">IssueFilters (Server · 0 KB JS)</text>
+          <text x="201" y="146" text-anchor="middle" fill="#879497" font-size="13">passed via children slot</text>
+          <rect x="78" y="164" width="247" height="58" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="201" y="189" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">SearchBox ("use client")</text>
+          <text x="201" y="208" text-anchor="middle" fill="#81F7F7" font-size="13">calls startTransition()</text>
+
+          <rect x="375" y="100" width="311" height="140" rx="14" fill="#153139" stroke="#02EFF0" stroke-width="2"/>
+          <text x="530" y="126" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">PendingRegion ("use client" ring)</text>
+          <text x="530" y="145" text-anchor="middle" fill="#879497" font-size="13">dims with opacity-60 &amp; aria-busy</text>
+          <rect x="397" y="158" width="267" height="66" rx="12" fill="#0F282F" stroke="#2E464C"/>
+          <text x="530" y="185" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">IssueTable + Pagination</text>
+          <text x="530" y="206" text-anchor="middle" fill="#81F7F7" font-size="13">Server · 0 KB JS (children hole)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">IssueListView</code> renders <code class="ic">IssueFilters</code> and <code class="ic">IssueTable</code> on the server and slots them into the client <code class="ic">ListPendingProvider</code> and <code class="ic">PendingRegion</code> rings.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">React 19 Context design: keep changing state out of broad contexts</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">ToastContext</code> provides only the stable <code class="ic">toast</code> function, never the changing <code class="ic">toasts</code> array.</p>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">Example: Components re-rendered per toast popup (app with 25 <code class="ic">useToast()</code> callers)</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
+          <span class="text-sm text-storm-200"><code class="ic">toasts</code> in Context</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="25"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-right">25 renders</span>
+        </div>
+        <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[12rem_1fr_6rem] items-center gap-3">
+          <span class="text-sm text-storm-200">Only <code class="ic">toast</code> fn</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-right">1 render</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">When Context holds only the stable <code class="ic">toast</code> function, only <code class="ic">ToastRegion</code> re-renders when toasts appear or dismiss.</p>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/toast/toast-provider.tsx" data-lang="ts" data-hl="1,4"><code>const ToastContext = createContext&lt;ShowToast | null&gt;(null);
+
+export function useToast(): ShowToast {
+  const toast = use(ToastContext);
+  if (!toast) throw new Error("useToast must be used inside &lt;ToastProvider&gt;.");
+  return toast;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">ToastContext</code> carries <code class="ic">ShowToast</code> (a stable callback), not <code class="ic">ToastItem[]</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">use(ToastContext)</code> reads the context using React 19's <code class="ic">use()</code> API.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Older React syntax</p>
+        <p class="mt-3 text-storm-200">Render <code class="ic">&lt;ToastContext.Provider value={toast}&gt;</code> and read with <code class="ic">useContext(ToastContext)</code>, which cannot run inside <code class="ic">if</code> blocks.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React 19 syntax</p>
+        <p class="mt-3 text-storm-200">Render <code class="ic">&lt;ToastContext value={toast}&gt;</code> directly and read with <code class="ic">use(ToastContext)</code>, which can be called conditionally after early returns or inside <code class="ic">if</code> blocks.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">useId and why fixed DOM IDs break in Next.js 16</h4>
+    <p class="text-storm-200 max-w-3xl">Next.js 16 uses React <code class="ic">&lt;Activity&gt;</code> to keep previous routes hidden in the DOM. If both <code class="ic">/issues/new</code> and <code class="ic">/issues/1/edit</code> render <code class="ic">id="title"</code>, clicking the label on Edit focuses the hidden New Issue input.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Two pages kept in the DOM by Activity colliding on fixed id="title", solved by useFieldId and useId</title>
+          <rect x="16" y="24" width="310" height="132" rx="16" fill="#153139" stroke="#2E464C" stroke-dasharray="6 4"/>
+          <text x="171" y="52" text-anchor="middle" fill="#879497" font-size="14" font-weight="600">/issues/new (hidden by &lt;Activity&gt;)</text>
+          <rect x="44" y="72" width="254" height="64" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="171" y="98" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">&lt;input id="title"&gt; (first in DOM)</text>
+          <text x="171" y="120" text-anchor="middle" fill="#879497" font-size="13">steals focus when label is clicked!</text>
+
+          <rect x="394" y="24" width="310" height="132" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="549" y="52" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">/issues/1/edit (visible page)</text>
+          <rect x="422" y="72" width="254" height="64" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="549" y="98" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">&lt;label htmlFor="title"&gt;</text>
+          <text x="549" y="120" text-anchor="middle" fill="#879497" font-size="13">&lt;input id="title"&gt; (second in DOM)</text>
+
+          <path d="M 422 95 L 304 95" fill="none" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+          <text x="360" y="84" text-anchor="middle" fill="#FF7A6B" font-size="13">wrong target!</text>
+
+          <rect x="16" y="174" width="688" height="42" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="360" y="200" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Fix: useFieldId() uses useId() → each form instance gets its own ID prefix</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Fixed IDs collide when <code class="ic">&lt;Activity&gt;</code> keeps previous routes mounted. <code class="ic">useId()</code> creates a unique prefix per component instance that matches across SSR and hydration.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/use-field-id.ts" data-lang="ts" data-hl="2-3"><code>export function useFieldId() {
+  const base = useId();
+  return (name: string) =&gt; `${base}-${name}`;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">useId()</code> generates a deterministic ID shared between Server and Client hydration.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">Every mounted form gets its own namespace (for example <code class="ic">${base}-title</code>).</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Can a Client Component render a Server Component? Explain how the module graph works.</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Cannot import directly:</strong> A Client Component cannot <code class="ic">import</code> a Server Component. <code class="ic">"use client"</code> marks the boundary where all imported files are bundled for the browser.</p>
+        <p><strong class="text-vivid-300">Can render via props:</strong> A parent Server Component can pass a Server Component into a Client Component via <code class="ic">children</code> or another JSX prop. React renders the Server Component on the server into a serialized RSC payload (virtual DOM description) and slots it into the Client Component.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">How do you prevent unnecessary re-renders when using React Context for global UI features like Toasts or Modals?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Separate the command/dispatch context from the state display.</strong></p>
+        <p>Put only stable functions (like <code class="ic">showToast</code>) in the broad context so components that trigger toasts never re-render when toasts change. Only the <code class="ic">&lt;ToastRegion&gt;</code> component holds or reads the changing array of active toasts.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-04" data-toc="3.4 Concurrent &amp; forms" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.4</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">useTransition · useOptimistic · useActionState · useFormStatus</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">React 19 concurrent and form APIs</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">React 19 replaces manual <code class="ic">isLoading</code> and rollback boilerplate with <mark class="hl">four coordinated hooks</mark> for transitions, optimistic UI, and forms.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A waiter writes "coming soon" on your table card right away, and wipes it clean if the kitchen says no.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Four coordinated React 19 hooks</h4>
+    <p class="text-storm-200 max-w-3xl">Three hooks come from <code class="ic">react</code> and one comes from <code class="ic">react-dom</code>.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Angular / older React habit</p>
+        <p class="mt-3 text-storm-200">Manually managing <code class="ic">isLoading</code>, <code class="ic">error</code>, and a saved <code class="ic">prevValue</code> variable with <code class="ic">try / catch</code> rollback code on every mutation.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> React 19 way</p>
+        <p class="mt-3 text-storm-200">Coordinate async mutations with <code class="ic">useTransition</code>, <code class="ic">useOptimistic</code>, <code class="ic">useActionState</code>, and <code class="ic">useFormStatus</code>.</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="activity" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useTransition</code> · from <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">Run a state update or async action in the background without blocking user input; tracks <code class="ic">pending</code>. Examples: <code class="ic">StatusControl</code>, <code class="ic">SearchBox</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useOptimistic</code> · from <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">Immediately show the expected new UI state while an async transition or action is in flight; auto-reverts when it ends. Examples: <code class="ic">StatusControl</code>, <code class="ic">CommentThread</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sliders" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useActionState</code> · from <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">Wire a <code class="ic">&lt;form&gt;</code> to <code class="ic">(prevState, formData) =&gt; nextState</code>, tracking the latest <code class="ic">FormState</code> and <code class="ic">isPending</code>. Examples: <code class="ic">IssueForm</code>, <code class="ic">CommentThread</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useFormStatus</code> · from <code class="ic">react-dom</code></p>
+        <p class="mt-1 text-sm text-storm-300">Read <code class="ic">{ pending, data }</code> of the parent <code class="ic">&lt;form&gt;</code> from inside a child component. Example: <code class="ic">SubmitButton</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">How useTransition and useOptimistic work together</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">StatusControl</code> updates the dropdown immediately and lets React handle both seamless server confirmation and automatic failure rollback.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">6-step <code class="ic">StatusControl</code> lifecycle · Success vs failure branch</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">Select</p>
+          <p class="text-xs text-storm-300">User picks <code class="ic">"in_progress"</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">Transition</p>
+          <p class="text-xs text-storm-300"><code class="ic">startTransition</code> sets <code class="ic">pending = true</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03</p>
+          <p class="font-semibold text-white">Optimistic UI</p>
+          <p class="text-xs text-storm-300"><code class="ic">setOptimisticStatus</code> shows it with zero delay.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white">Server Action</p>
+          <p class="text-xs text-storm-300"><code class="ic">changeStatusAction</code> + <code class="ic">updateTag</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">05 · if ok</p>
+          <p class="font-semibold text-white">Streams new prop</p>
+          <p class="text-xs text-storm-300">Server sends <code class="ic">status="in_progress"</code>, no flicker.</p>
+        </div>
+        <div class="self-center shrink-0 grid place-items-center w-9 h-9 rounded-full border border-storm-500 bg-storm-900 font-mono text-xs font-semibold text-white">or</div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">05 · if error</p>
+          <p class="font-semibold text-white">Auto-rollback</p>
+          <p class="text-xs text-storm-300">Transition ends; React reverts to server <code class="ic">status</code>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/status-control.tsx" data-lang="ts" data-hl="1-2,5-7"><code>const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
+const [pending, startTransition] = useTransition();
+
+function onChange(next: IssueStatus) {
+  startTransition(async () =&gt; {
+    setOptimisticStatus(next);
+    const result = await changeStatusAction(issueId, next);
+    if (result.ok) toast(`Status changed to ${STATUS_LABELS[next]}.`);
+    else toast(result.message, "error");
+  });
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">setOptimisticStatus(next)</code> switches the displayed status before the network request starts.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">If <code class="ic">result.ok</code> is <code class="ic">false</code>, you only show an error toast—React drops the optimistic overlay automatically when the transition settles.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Why SubmitButton must be a separate child component</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">useFormStatus()</code> works like reading Context from the nearest ancestor <code class="ic">&lt;form&gt;</code>.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">useFormStatus()</code> in the same component that renders <code class="ic">&lt;form&gt;</code> is always <code class="ic">false</code></p>
+      <p class="mt-1 text-sm text-storm-200">A hook called above <code class="ic">&lt;form&gt;</code> has no parent form to read from. Always call <code class="ic">useFormStatus()</code> inside a child component rendered <em>inside</em> <code class="ic">&lt;form&gt;...&lt;/form&gt;</code>.</p>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>useFormStatus called in the same component as form is always false, while child SubmitButton inside form reads pending true</title>
+          <rect x="16" y="24" width="320" height="172" rx="16" fill="#153139" stroke="#FF7A6B"/>
+          <text x="176" y="52" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">Wrong: Same component as &lt;form&gt;</text>
+          <rect x="38" y="68" width="276" height="42" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="176" y="94" text-anchor="middle" fill="#FF7A6B" font-size="13">useFormStatus() → pending: false</text>
+          <rect x="38" y="124" width="276" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="176" y="156" text-anchor="middle" fill="#879497" font-size="13">return &lt;form&gt;&lt;button /&gt;&lt;/form&gt;</text>
+
+          <rect x="384" y="24" width="320" height="172" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="544" y="52" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Right: Nested child inside &lt;form&gt;</text>
+          <rect x="406" y="68" width="276" height="114" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="544" y="92" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">&lt;form action={dispatch}&gt;</text>
+          <rect x="428" y="106" width="232" height="60" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="544" y="130" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">&lt;SubmitButton&gt;</text>
+          <text x="544" y="152" text-anchor="middle" fill="#81F7F7" font-size="13">parent &lt;form&gt; → pending: true</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">SubmitButton</code> sits inside <code class="ic">&lt;form&gt;</code>, so <code class="ic">useFormStatus()</code> reads the nearest ancestor form's <code class="ic">pending</code> state.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/submit-button.tsx" data-lang="ts" data-hl="2,4-5"><code>export function SubmitButton({ children, pendingLabel, ...props }) {
+  const { pending } = useFormStatus();
+  return (
+    &lt;Button type="submit" disabled={pending || props.disabled} aria-disabled={pending} {...props}&gt;
+      {pending &amp;&amp; pendingLabel ? pendingLabel : children}
+    &lt;/Button&gt;
+  );
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">useFormStatus()</code> returns <code class="ic">{ pending }</code> from the enclosing <code class="ic">&lt;form&gt;</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">While the form action is running, the button disables itself and swaps in <code class="ic">pendingLabel</code>.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Senior interview questions</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">What is the difference between a normal state update and a state update wrapped in <code class="ic">startTransition</code>?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Urgent vs non-urgent:</strong> Normal state updates (like typing into an <code class="ic">&lt;input&gt;</code>) are urgent and synchronous—they block the UI until rendered.</p>
+        <p><strong class="text-vivid-300">Interruptible transitions:</strong> Wrapping an update (or a Next.js router navigation) in <code class="ic">startTransition</code> marks it as non-urgent and interruptible. While a transition is pending, React keeps the current UI interactive on screen instead of showing a blank fallback. If the user types again, React interrupts the stale render.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">How does <code class="ic">useOptimistic</code> handle rollbacks when a server mutation fails?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">useOptimistic(passthroughState)</code> never permanently mutates state.</strong></p>
+        <p>The temporary optimistic value exists only while an async Action or <code class="ic">startTransition</code> is actively pending. The moment the transition settles, React discards the optimistic overlay and falls back to the authoritative <code class="ic">passthroughState</code> prop from the server.</p>
+      </div>
+    </article>
+  </div>
+</section>

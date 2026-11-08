@@ -1,0 +1,298 @@
+<!--
+  DESIGN KIT: the only allowed building blocks for chapter fragments.
+  Copy the markup of a component, then change only the text, icons, numbers and the SVG drawing.
+  Palette: storm-* (dark green-grey, page and cards), vivid-* (cyan: the key idea, the right way),
+           coral-* (only for traps, the wrong way and failures), white (headings, paper cards).
+  Icons: Lucide 0.460 names, written as <i data-lucide="name" class="w-5 h-5"></i>.
+  Inline code: <code class="ic">req.body</code>. Highlight a key phrase: <mark class="hl">fail-closed</mark>.
+-->
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10" data-toc-group="Design kit" id="kit">
+
+<!-- K1 CHAPTER: one <section> per chapter. id = prefix + two digits. data-toc = short label (max 32 chars).
+     Children are spaced with space-y-12. Put sub-topics in <div class="space-y-6"> with an <h4 class="subhead">. -->
+<section id="kit-01" data-toc="K1 Chapter shell" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.2</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Middleware · Order · Security</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Order is architecture</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Express is just an <mark class="hl">ordered list of functions</mark>. Each request walks the list from the top.</p>
+  </header>
+
+  <div class="space-y-6">
+    <h4 class="subhead">A sub-topic heading</h4>
+    <p class="text-storm-200 max-w-3xl">Body text: one or two short sentences. B1–B2 English. Use body text only to connect the visuals.</p>
+  </div>
+</section>
+
+<section id="kit-02" data-toc="K2–K4 Callouts" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K2 REAL-WORLD PICTURE: a white paper card with one everyday comparison. Use one per chapter, near the top. -->
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="plane-takeoff" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Middleware is an airport security line. Each desk checks one thing. A desk can send you on, send you home, or call the police.</p>
+    </div>
+  </div>
+
+  <!-- K3 KEY IDEA: cyan bar. The one sentence the reader must remember. -->
+  <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+    <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+    <p class="mt-2 text-lg md:text-xl text-white font-medium">Put the trace ID middleware <em>before</em> auth. Then even a <code class="ic">401</code> has a trace ID.</p>
+  </div>
+
+  <!-- K4 TRAP: coral. What breaks, then the exact symptom. Use a grid when there are several traps. -->
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap</p>
+      <p class="mt-2 text-white font-semibold">No <code class="ic">next()</code> and no response</p>
+      <p class="mt-1 text-sm text-storm-200">The client waits until the load balancer returns <code class="ic">504 Gateway Timeout</code>.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">next()</code> after <code class="ic">res.json()</code></p>
+      <p class="mt-1 text-sm text-storm-200">Crash: <code class="ic">ERR_HTTP_HEADERS_SENT</code>. Always <code class="ic">return res.json(...)</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="kit-03" data-toc="K5 Wrong vs right" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K5 WRONG vs RIGHT (or OLD vs NEW, A vs B). Left = coral, right = cyan. Can contain a small code block. -->
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+      <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Express 4</p>
+      <p class="mt-3 text-storm-200">An <code class="ic">async</code> handler throws. Nobody catches the rejected promise.</p>
+      <p class="mt-3 text-sm font-mono text-coral-300">→ request hangs or the process crashes</p>
+    </div>
+    <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+      <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Express 5</p>
+      <p class="mt-3 text-storm-200">The router sees the rejected promise and calls <code class="ic">next(err)</code> for you.</p>
+      <p class="mt-3 text-sm font-mono text-vivid-300">→ the error handler returns clean JSON</p>
+    </div>
+  </div>
+</section>
+
+<section id="kit-04" data-toc="K6–K7 Flows and steps" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K6 FLOW with a PLAY button. Steps light up one by one when visible and when Play is clicked.
+       Each step: a .step box. Between steps: an arrow div (rotates on mobile). Mark a special step with border-vivid-400 or coral. -->
+  <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+    <div class="flex items-center justify-between gap-4">
+      <p class="text-sm font-semibold text-white">Request → Response</p>
+      <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+    </div>
+    <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+      <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+        <p class="font-mono text-[11px] text-storm-400">01</p>
+        <p class="font-semibold text-white">CORS</p>
+        <p class="text-xs text-storm-300">answers preflight</p>
+      </div>
+      <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+      <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+        <p class="font-mono text-[11px] text-storm-400">02</p>
+        <p class="font-semibold text-white">JSON body</p>
+        <p class="text-xs text-storm-300">fills <code class="ic">req.body</code></p>
+      </div>
+      <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+      <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+        <p class="font-mono text-[11px] text-storm-400">03</p>
+        <p class="font-semibold text-white">Auth</p>
+        <p class="text-xs text-storm-300">checks the JWT</p>
+      </div>
+      <div class="self-center text-coral-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+      <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+        <p class="font-mono text-[11px] text-coral-300">on error</p>
+        <p class="font-semibold text-white">Error handler</p>
+        <p class="text-xs text-storm-300">always last</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- K7 VERTICAL TIMELINE: ordered steps that need one or two lines each (rotation, lifecycles, checklists). Add data-stepper + Play button if it is a sequence in time. -->
+  <ol class="reveal relative border-l-2 border-storm-600 ml-3 space-y-6">
+    <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+      <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+      <p class="font-semibold text-white">Login issues refresh token R1</p>
+      <p class="text-sm text-storm-300">Saved as a SHA-256 hash.</p>
+    </li>
+    <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+      <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+      <p class="font-semibold text-white">Refresh with R1 → server issues R2</p>
+      <p class="text-sm text-storm-300">R1 is no longer valid.</p>
+    </li>
+    <li class="step ml-6 rounded-xl border border-transparent p-3 -my-3">
+      <span class="absolute -left-[13px] grid place-items-center w-6 h-6 rounded-full bg-coral-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+      <p class="font-semibold text-coral-300">Someone uses R1 again</p>
+      <p class="text-sm text-storm-300">Theft signal → revoke the whole session.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="kit-05" data-toc="K8 Code block" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K8 CODE: real code from the source only. Escape < > & as &lt; &gt; &amp; inside <code>.
+       data-file = file path label. data-lang = ts | js | cs | sql | json | bash | text. data-hl = lines to mark ("3,7-9").
+       Keep it short: cut unimportant lines with a comment such as // ... . Put numbered notes under it when lines need words.
+       The script adds the header, colors, line numbers and the Copy button. Do not add those yourself. -->
+  <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+    <pre data-file="src/routes/express-adapter.ts" data-lang="ts" data-hl="4-5,8-9"><code>register(path, async (req, res, next) =&gt; {
+  const context = createRouteContext(req, res);
+  try {
+    const response = await handler(context);
+    await sendWebResponse(res, response);
+  } catch (error) {
+    next(error); // forward to errorHandler
+  } finally {
+    await context.closeDb?.();
+  }
+});</code></pre>
+    <ul class="space-y-3 text-sm">
+      <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">Every handler <strong class="text-white">returns</strong> a Web <code class="ic">Response</code>.</span></li>
+      <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">finally</code> closes the DB client, even after an error.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="kit-06" data-toc="K9–K10 Charts and stats" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K9 BAR CHART: bars grow when visible. data-value = number (any unit); width = value / max.
+       Coral bar = the bad case. Cyan bar = the good case. Always print the value at the right. Add a one-line caption. -->
+  <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+    <figcaption class="text-sm font-semibold text-white">6 queries, database 40 ms away</figcaption>
+    <div data-chart class="mt-5 space-y-4">
+      <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+        <span class="text-sm text-storm-200">One by one</span>
+        <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="240"></div></div>
+        <span class="font-mono text-sm text-coral-300 text-right">240 ms</span>
+      </div>
+      <div class="grid grid-cols-[7rem_1fr_4.5rem] sm:grid-cols-[10rem_1fr_5rem] items-center gap-3">
+        <span class="text-sm text-storm-200">In parallel</span>
+        <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="40"></div></div>
+        <span class="font-mono text-sm text-vivid-300 text-right">40 ms</span>
+      </div>
+    </div>
+    <p class="mt-4 text-xs text-storm-400">Six round-trips collapse into the time of one.</p>
+  </figure>
+
+  <!-- K10 STAT TILES: big numbers from the source. 2 to 4 tiles. -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+      <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">50,000</p>
+      <p class="mt-1 text-sm text-storm-300">PBKDF2 iterations</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+      <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">16 B</p>
+      <p class="mt-1 text-sm text-storm-300">random salt per user</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+      <p class="font-mono text-3xl md:text-4xl font-semibold text-white">15 min</p>
+      <p class="mt-1 text-sm text-storm-300">access token life</p>
+    </div>
+    <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+      <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">504</p>
+      <p class="mt-1 text-sm text-storm-300">when nobody answers</p>
+    </div>
+  </div>
+</section>
+
+<section id="kit-07" data-toc="K11 Compare table" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K11 COMPARE TABLE: two or three options side by side. Keep cells short (max ~12 words). -->
+  <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+    <table class="w-full min-w-[560px] text-sm">
+      <thead class="bg-storm-800 text-left">
+        <tr>
+          <th class="p-4 font-medium text-storm-300 w-1/4"></th>
+          <th class="p-4 font-semibold text-white"><code class="ic">React.cache(fn)</code></th>
+          <th class="p-4 font-semibold text-vivid-300"><code class="ic">"use cache"</code></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-storm-700 bg-storm-900">
+        <tr><td class="p-4 text-storm-300">Lifetime</td><td class="p-4 text-storm-100">One server render</td><td class="p-4 text-storm-100">Across requests and users</td></tr>
+        <tr><td class="p-4 text-storm-300">Reads cookies?</td><td class="p-4 text-vivid-300">Yes</td><td class="p-4 text-coral-300">No, it throws</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="kit-08" data-toc="K12 Interview answer" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K12 INTERVIEW ANSWER: every question from the source gets one card. The answer is ALWAYS visible (no quiz, no hidden text).
+       Keep every fact of the source answer, in short simple sentences or bullets. A small visual inside is welcome. -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+    <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer</p>
+    <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why one global auth middleware with a public allowlist?</h4>
+    <div class="mt-5 grid gap-3 text-storm-100">
+      <p><strong class="text-vivid-300">Fail-closed.</strong> Every new route is private by default.</p>
+      <p>With 40+ endpoints, someone will forget <code class="ic">authMiddleware</code> on one route. A global gate plus an explicit <code class="ic">PUBLIC_PATHS</code> list removes that risk.</p>
+    </div>
+  </article>
+
+  <!-- K12b PITCH / QUOTE: for a "say this in the interview" answer or a 60-second pitch. -->
+  <blockquote class="reveal relative rounded-3xl brand-glow p-7 md:p-10 overflow-hidden">
+    <i data-lucide="quote" class="absolute right-6 top-6 w-16 h-16 text-vivid-400/25"></i>
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-300 font-semibold">Say it like a senior</p>
+    <p class="mt-3 text-xl md:text-2xl text-white font-light leading-relaxed">"I choose architecture based on team size and domain complexity."</p>
+  </blockquote>
+</section>
+
+<section id="kit-09" data-toc="K13–K14 Layers and facts" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K13 LAYERS / PYRAMID: stacked bars. Use for layers of defence, test pyramids, lifetimes. -->
+  <div class="reveal flex flex-col items-center gap-2 text-center">
+    <div class="w-[46%] rounded-xl bg-vivid-400 text-storm-900 py-3 font-semibold">E2E · Playwright</div>
+    <div class="w-[64%] rounded-xl bg-vivid-400/70 text-storm-900 py-3 font-semibold">DB + Actions · PGlite</div>
+    <div class="w-[82%] rounded-xl bg-vivid-400/40 text-white py-3 font-semibold">Components + hooks</div>
+    <div class="w-full rounded-xl bg-storm-700 text-white py-3 font-semibold">Unit · pure functions</div>
+  </div>
+
+  <!-- K14 FACT GRID: 2 to 6 small cards, icon + title + one line. -->
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+      <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="arrow-right-circle" class="w-5 h-5"></i></div>
+      <p class="mt-4 font-semibold text-white">Call <code class="ic">next()</code></p>
+      <p class="mt-1 text-sm text-storm-300">Pass control to the next function.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+      <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-5 h-5"></i></div>
+      <p class="mt-4 font-semibold text-white">Send a response</p>
+      <p class="mt-1 text-sm text-storm-300"><code class="ic">res.json()</code> finishes the request.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+      <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="siren" class="w-5 h-5"></i></div>
+      <p class="mt-4 font-semibold text-white">Call <code class="ic">next(err)</code></p>
+      <p class="mt-1 text-sm text-storm-300">Jump to the error handler.</p>
+    </div>
+  </div>
+</section>
+
+<section id="kit-10" data-toc="K15 SVG illustration" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <!-- K15 SVG ILLUSTRATION ("generated image"): draw the mechanism, not decoration.
+       Rules: viewBox width 640–760; text font-size 13–18; font-family="Lexend, sans-serif".
+       Colors: panels #153139 / #0F282F, strokes #2E464C, main text #FFFFFF, muted text #879497,
+       highlight #02EFF0, light cyan #81F7F7, danger #FF7A6B. Use the shared defs: marker-end="url(#arw)" | "url(#arw-cyan)" | "url(#arw-coral)",
+       fill="url(#g-brand)" | "url(#g-cyan)" | "url(#g-orb)", filter="url(#glow)". Do not define new ids; if you must, prefix them with the chapter id.
+       Wrap: figure > div.overflow-x-auto > svg.w-full.min-w-[540px]. Always add <title> and a one-line figcaption. -->
+  <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+    <div class="overflow-x-auto">
+      <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+        <title>A request travels from the edge runtime into Express</title>
+        <rect x="10" y="70" width="140" height="80" rx="16" fill="#153139" stroke="#2E464C"/>
+        <text x="80" y="105" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="600">Cloudflare</text>
+        <text x="80" y="127" text-anchor="middle" fill="#879497" font-size="13">fetch(request)</text>
+        <line x1="150" y1="110" x2="275" y2="110" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+        <rect x="285" y="70" width="150" height="80" rx="16" fill="#153139" stroke="#2E464C"/>
+        <text x="360" y="105" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="600">http.Server</text>
+        <text x="360" y="127" text-anchor="middle" fill="#879497" font-size="13">Node adapter</text>
+        <line x1="435" y1="110" x2="555" y2="110" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+        <circle cx="630" cy="110" r="62" fill="url(#g-orb)" filter="url(#glow)" opacity=".95"/>
+        <text x="630" y="106" text-anchor="middle" fill="#0F282F" font-size="17" font-weight="700">app(req, res)</text>
+        <text x="630" y="127" text-anchor="middle" fill="#0F282F" font-size="13">just a function</text>
+      </svg>
+    </div>
+    <figcaption class="mt-3 text-sm text-storm-300">The edge runtime speaks Web <code class="ic">Request</code>. A tiny adapter turns it into a Node request for Express.</figcaption>
+  </figure>
+
+  <!-- K16 CHIPS: tags for tech names. -->
+  <div class="flex flex-wrap gap-2">
+    <span class="chip"><i data-lucide="zap" class="w-3.5 h-3.5 text-vivid-400"></i> Express 5</span>
+    <span class="chip">Cloudflare Workers</span>
+    <span class="chip">Drizzle ORM</span>
+  </div>
+</section>
+</div>

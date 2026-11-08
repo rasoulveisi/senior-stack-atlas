@@ -1,0 +1,1214 @@
+<section id="ex-07" data-toc="1.7 Pooling &amp; Hyperdrive" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.7</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Connection Pooling · Cloudflare Hyperdrive · Transactions</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Database engineering</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Edge workers spin up by the hundreds. Without <mark class="hl">transaction-mode connection pooling</mark>, a traffic spike exhausts PostgreSQL connections in seconds.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="car" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Cloudflare Hyperdrive is a taxi rank shared by everyone outside a hotel. Instead of 500 guests each buying a car for one short trip, guests borrow a warm taxi and return it right after.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The serverless PostgreSQL trap</h4>
+    <p class="text-storm-200 max-w-3xl">Traditional Node.js apps run on 2 or 3 long-lived servers with 20 pooled TCP connections each (<code class="ic">2 * 20 = 40</code>). In a serverless edge runtime like Cloudflare Workers, a traffic spike can spin up 500 isolated worker instances around the world.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 270" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>2 classic servers open 40 pooled connections while 500 edge workers opening fresh TCP, TLS, and auth connections crash PostgreSQL</title>
+          <rect x="14" y="18" width="340" height="234" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="184" y="46" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">Classic Long-Lived Servers (2 × 20 = 40)</text>
+
+          <rect x="34" y="68" width="130" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="99" y="92" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Node Server 1</text>
+          <text x="99" y="111" text-anchor="middle" fill="#81F7F7" font-size="13">pool of 20 TCP</text>
+
+          <rect x="34" y="140" width="130" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="99" y="164" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Node Server 2</text>
+          <text x="99" y="183" text-anchor="middle" fill="#81F7F7" font-size="13">pool of 20 TCP</text>
+
+          <line x1="164" y1="95" x2="214" y2="122" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+          <line x1="164" y1="167" x2="214" y2="140" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="222" y="92" width="116" height="78" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="280" y="125" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">PostgreSQL</text>
+          <text x="280" y="147" text-anchor="middle" fill="#81F7F7" font-size="13">40 warm sockets</text>
+          <text x="184" y="228" text-anchor="middle" fill="#879497" font-size="13">Handshakes happen once at startup</text>
+
+          <rect x="378" y="18" width="368" height="234" rx="16" fill="#153139" stroke="#FF7A6B"/>
+          <text x="562" y="46" text-anchor="middle" fill="#FF7A6B" font-size="15" font-weight="600">500 Edge Workers Without a Pooler</text>
+
+          <rect x="396" y="64" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="87" text-anchor="middle" fill="#FFFFFF" font-size="13">Worker #1 (TCP+TLS)</text>
+
+          <rect x="396" y="110" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="133" text-anchor="middle" fill="#FFFFFF" font-size="13">Worker #2 (TCP+TLS)</text>
+
+          <rect x="396" y="156" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="179" text-anchor="middle" fill="#FFFFFF" font-size="12">Worker #500 (TCP+TLS)</text>
+
+          <line x1="534" y1="82" x2="582" y2="112" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="534" y1="128" x2="582" y2="128" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="534" y1="174" x2="582" y2="144" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+
+          <rect x="590" y="84" width="140" height="88" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="660" y="116" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="700">PostgreSQL Crash</text>
+          <text x="660" y="137" text-anchor="middle" fill="#FFFFFF" font-size="13">FATAL: sorry, too</text>
+          <text x="660" y="155" text-anchor="middle" fill="#FFFFFF" font-size="13">many clients already</text>
+          <text x="562" y="228" text-anchor="middle" fill="#FF7A6B" font-size="13">+150–300 ms latency per request</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Each fresh connection requires a TCP 3-way handshake, a TLS handshake, and Postgres authentication before running a single query.</figcaption>
+    </figure>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">40</p>
+        <p class="mt-1 text-sm text-storm-300">classic pool (<code class="ic">2 * 20</code>)</p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">500</p>
+        <p class="mt-1 text-sm text-storm-300">edge workers in a spike</p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-2xl md:text-3xl font-semibold text-coral-300">+150–300 ms</p>
+        <p class="mt-1 text-sm text-storm-300">per request on cold connect</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">max: 5</p>
+        <p class="mt-1 text-sm text-storm-300">worker socket cap in <code class="ic">client.ts</code></p>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap · Unpooled Serverless Connections</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">FATAL: sorry, too many clients already</code></p>
+      <p class="mt-1 text-sm text-storm-200">Opening 500 direct TCP, TLS, and Postgres auth connections adds 150–300 ms of handshake latency to every request. PostgreSQL then immediately runs out of client slots.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">How PhysioCoach AI solves this: Cloudflare Hyperdrive + Drizzle ORM</h4>
+    <p class="text-storm-200 max-w-3xl">In <code class="ic">src/db/client.ts</code>, Workers connect to Neon PostgreSQL through Cloudflare Hyperdrive instead of opening raw connections across the internet.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Edge Worker → Hyperdrive Pool → Neon PostgreSQL</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">Edge Workers</p>
+          <p class="text-xs text-storm-300">500 isolated instances</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white">Cloudflare Hyperdrive</p>
+          <p class="text-xs text-storm-300">transaction-mode pooler</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Neon PostgreSQL</p>
+          <p class="text-xs text-storm-300">warm backend connections</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/db/client.ts" data-lang="ts" data-hl="5-6"><code>const client = postgres(connectionString, {
+  max: 5,
+  idle_timeout: 10,
+  connect_timeout: 10,
+  prepare: false,     // &lt;-- CRITICAL for transaction-mode connection poolers!
+  fetch_types: false, // &lt;-- Saves an extra startup round-trip query on cold start!
+});
+
+return drizzle(client, { schema });</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">prepare: false</code> disables named prepared statements so transaction-mode pooling never crashes across reassigned backends.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">fetch_types: false</code> skips the automatic <code class="ic">pg_type</code> introspection query, cutting cold-start round-trips in half.</span></li>
+      </ul>
+    </div>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">Why are <code class="ic">prepare: false</code> and <code class="ic">fetch_types: false</code> set in <code class="ic">src/db/client.ts</code>?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">1. <code class="ic">prepare: false</code> (Disabling Named Prepared Statements):</strong> Connection poolers like Cloudflare Hyperdrive and PgBouncer run in <strong>Transaction Pooling Mode</strong>. Transaction 1 might run on Postgres backend connection <code class="ic">#42</code>, while Transaction 2 runs on Postgres backend connection <code class="ic">#19</code>. Named prepared statements in Postgres are scoped to a <em>specific backend TCP connection</em>. Suppose <code class="ic">postgres.js</code> prepares statement <code class="ic">s1</code> on connection <code class="ic">#42</code> and later executes <code class="ic">s1</code> on connection <code class="ic">#19</code>. Postgres crashes with <code class="ic">ERROR: prepared statement "s1" does not exist</code>. Setting <code class="ic">prepare: false</code> uses simple/unnamed protocol execution so transaction pooling works seamlessly.</p>
+        <p><strong class="text-vivid-300">2. <code class="ic">fetch_types: false</code> (Cold-Start Introspection):</strong> On connect, <code class="ic">postgres.js</code> normally runs <code class="ic">SELECT oid, typname FROM pg_type...</code> to discover custom Postgres types before your first query. In a serverless Worker, that extra query doubles your database round-trips on initial connection. Disabling <code class="ic">fetch_types</code> cuts cold-start DB latency in half.</p>
+      </div>
+
+      <div class="mt-6 space-y-5 pt-5 border-t border-storm-700">
+        <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-4">
+          <div class="overflow-x-auto">
+            <svg viewBox="0 0 740 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+              <title>Transaction 1 prepares statement s1 on backend #42, then Transaction 2 lands on backend #19 and fails because s1 does not exist there</title>
+              <rect x="14" y="56" width="160" height="108" rx="14" fill="#153139" stroke="#2E464C"/>
+              <text x="94" y="96" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Hyperdrive Pool</text>
+              <text x="94" y="118" text-anchor="middle" fill="#81F7F7" font-size="13">Transaction Mode</text>
+              <text x="94" y="140" text-anchor="middle" fill="#879497" font-size="13">reassigns per tx</text>
+
+              <line x1="174" y1="84" x2="246" y2="58" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+              <line x1="174" y1="136" x2="246" y2="162" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+              <rect x="254" y="20" width="210" height="76" rx="12" fill="#153139" stroke="#02EFF0"/>
+              <text x="359" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Tx 1 → Postgres Backend #42</text>
+              <text x="359" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13">PREPARE s1 (stored on #42)</text>
+
+              <rect x="254" y="124" width="210" height="76" rx="12" fill="#153139" stroke="#FF7A6B"/>
+              <text x="359" y="152" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">Tx 2 → Postgres Backend #19</text>
+              <text x="359" y="176" text-anchor="middle" fill="#FFFFFF" font-size="13">EXECUTE s1 (missing on #19!)</text>
+
+              <line x1="464" y1="162" x2="504" y2="162" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+              <rect x="512" y="120" width="214" height="84" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+              <text x="619" y="150" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="700">ERROR: prepared statement</text>
+              <text x="619" y="170" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="700">"s1" does not exist</text>
+              <text x="619" y="190" text-anchor="middle" fill="#81F7F7" font-size="13">Fix: prepare: false</text>
+            </svg>
+          </div>
+          <figcaption class="mt-2 text-xs text-storm-300">Named prepared statements live on one TCP backend. <code class="ic">prepare: false</code> switches to unnamed protocol execution so any backend can run any query.</figcaption>
+        </figure>
+
+        <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
+          <figcaption class="text-sm font-semibold text-white">Cold-start database round-trips for the first query</figcaption>
+          <div data-chart class="mt-4 space-y-4">
+            <div class="grid grid-cols-[10rem_1fr_7rem] sm:grid-cols-[15rem_1fr_8rem] items-center gap-3">
+              <span class="text-sm text-storm-200">Default (<code class="ic">pg_type</code> + query)</span>
+              <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
+              <span class="font-mono text-sm text-coral-300 text-right">2 round-trips</span>
+            </div>
+            <div class="grid grid-cols-[10rem_1fr_7rem] sm:grid-cols-[15rem_1fr_8rem] items-center gap-3">
+              <span class="text-sm text-storm-200"><code class="ic">fetch_types: false</code></span>
+              <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+              <span class="font-mono text-sm text-vivid-300 text-right">1 round-trip</span>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-storm-400">Skipping <code class="ic">SELECT oid, typname FROM pg_type...</code> cuts cold-start database round-trips in half.</p>
+        </figure>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Direct Drizzle queries &amp; pooled transactions</h4>
+    <p class="text-storm-200 max-w-3xl">PhysioCoach AI uses a Direct &amp; Flat Architecture instead of wrapping Drizzle ORM inside <code class="ic">UserRepository</code>, <code class="ic">WorkoutPlanRepository</code>, and <code class="ic">AbstractBaseRepository</code> classes.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Custom Repository Wrapper Classes</p>
+        <p class="mt-3 text-storm-200">Wraps an already type-safe SQL builder in <code class="ic">UserRepository</code> and <code class="ic">AbstractBaseRepository</code> layers.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ hides SQL joins, breeds N+1 bugs, hard to pass tx</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Direct Drizzle Queries in Routes &amp; Services</p>
+        <p class="mt-3 text-storm-200">Drizzle is already a type-safe SQL builder. Queries stay flat, explicit, and easy to inspect.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ visible joins and seamless tx passing across tables</p>
+      </div>
+    </div>
+
+    <p class="text-storm-200 max-w-3xl">When creating a password user in <code class="ic">src/routes/auth.ts</code>, we must insert into <code class="ic">users</code> and <code class="ic">auth_credentials</code> atomically. If the second insert fails, we never leave an orphaned user row with no password.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/routes/transactions.ts" data-lang="ts" data-hl="2,6-8,16"><code>export async function withTransactionFallback&lt;T&gt;(
+  db: ClientWithTransaction,
+  operation: (client: T) =&gt; Promise&lt;void&gt;,
+  contextLabel: string,
+): Promise&lt;void&gt; {
+  try {
+    await db.transaction(async (tx) =&gt; {
+      await operation(tx as T);
+    });
+    return;
+  } catch (error) {
+    if (!isTransactionBeginFailure(error)) {
+      throw error;
+    }
+    // ... fallback for stateless HTTP drivers that disallow BEGIN
+  }
+  await operation(db as unknown as T);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">db.transaction</code> runs <code class="ic">operation(tx)</code> atomically across <code class="ic">users</code> and <code class="ic">auth_credentials</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">If a stateless HTTP driver disallows <code class="ic">BEGIN</code>, <code class="ic">isTransactionBeginFailure</code> falls back to running <code class="ic">operation(db)</code>.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">A Drizzle transaction <code class="ic">tx</code> has the exact same query interface as <code class="ic">db</code>. Any function written to accept <code class="ic">client: T</code> works both inside and outside a transaction.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-08" data-toc="1.8 Safe AI integration" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.8</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Resilient AI · Constrained Hydration · Clinical Audit Trails</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Safe AI integrations</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">In a clinical domain, LLMs hallucinate. Surround external AI calls with <mark class="hl">pre-filtered database menus and deterministic safety gates</mark>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="clipboard-check" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Treat the LLM like a new intern in a hospital kitchen. The intern may only pick dishes from an approved safe menu, and a senior clinician checks every order before it leaves the kitchen.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The 6-step pipeline for <code class="ic">POST /workout-plans/generate</code></h4>
+    <p class="text-storm-200 max-w-3xl">Left unchecked, an LLM might invent an exercise or return broken JSON. Worse, it could prescribe heavy barbell spinal loading (<code class="ic">Barbell Good Mornings</code>) for an acute lumbar disc herniation. Here is how <code class="ic">src/services/workout-generator.ts</code> and <code class="ic">src/routes/workout-plans.ts</code> lock it down:</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Client <code class="ic">POST /workout-plans/generate</code> (<code class="ic">src/services/workout-generator.ts</code>)</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white text-sm">Input Hash</p>
+          <p class="text-xs text-storm-300">SHA-256 profile + injuries + goals</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white text-sm">Catalog Filter</p>
+          <p class="text-xs text-storm-300">remove injury conflicts in Postgres first</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white text-sm">OpenRouter LLM</p>
+          <p class="text-xs text-storm-300">pick safe IDs only + timeout &amp; fallbacks</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white text-sm">Zod Gate</p>
+          <p class="text-xs text-storm-300"><code class="ic">leanAiWorkoutPlanSchema</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">05</p>
+          <p class="font-semibold text-white text-sm">Hydrate &amp; Validate</p>
+          <p class="text-xs text-storm-300"><code class="ic">validateWorkoutPlan</code> + <code class="ic">runPlanAudit</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">06</p>
+          <p class="font-semibold text-white text-sm">Persist &amp; Return</p>
+          <p class="text-xs text-storm-300">save <code class="ic">ai_audit_logs</code> + return plan</p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-3 py-3">
+          <p class="font-mono text-[11px] text-coral-300">on failure</p>
+          <p class="font-semibold text-white text-sm">409 / 503</p>
+          <p class="text-xs text-storm-300"><code class="ic">traceId</code> + <code class="ic">auditLogId</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The clinical safety funnel</h4>
+    <p class="text-storm-200 max-w-3xl">Instead of letting the LLM invent exercises from scratch, each stage narrows what can reach the patient.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 250" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Safety funnel from full Postgres exercise catalog to filtered safe candidates, LLM ID selection, Zod validation, deterministic clinical validator, and final workout plan</title>
+          <rect x="10" y="24" width="112" height="124" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="66" y="72" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Full Catalog</text>
+          <text x="66" y="93" text-anchor="middle" fill="#879497" font-size="13">Postgres</text>
+          <text x="66" y="112" text-anchor="middle" fill="#81F7F7" font-size="13">exercise_catalog</text>
+
+          <line x1="122" y1="86" x2="144" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="150" y="34" width="122" height="104" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="211" y="72" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">Safe Candidates</text>
+          <text x="211" y="93" text-anchor="middle" fill="#FFFFFF" font-size="13">injuries filtered</text>
+          <text x="211" y="112" text-anchor="middle" fill="#879497" font-size="13">before AI call</text>
+
+          <line x1="272" y1="86" x2="294" y2="86" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="300" y="42" width="114" height="88" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="357" y="78" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">LLM Picks IDs</text>
+          <text x="357" y="99" text-anchor="middle" fill="#81F7F7" font-size="13">exerciseId only</text>
+
+          <line x1="414" y1="86" x2="436" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="442" y="46" width="96" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="490" y="80" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Zod Gate</text>
+          <text x="490" y="100" text-anchor="middle" fill="#81F7F7" font-size="13">JSON schema</text>
+
+          <line x1="538" y1="86" x2="560" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="566" y="46" width="108" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="620" y="78" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">Deterministic</text>
+          <text x="620" y="96" text-anchor="middle" fill="#FFFFFF" font-size="13">Clinical Gate</text>
+
+          <line x1="674" y1="86" x2="694" y2="86" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="700" y="50" width="52" height="72" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="726" y="91" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">Plan</text>
+
+          <line x1="490" y1="126" x2="490" y2="178" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="620" y1="126" x2="620" y2="178" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="380" y="184" width="340" height="46" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="550" y="212" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">Rejected → audit log + 409/503 + traceId</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">loadCatalogCandidatesFromDb</code> removes unsafe exercises before the prompt is built; <code class="ic">hydratePlanFromCatalog</code>, <code class="ic">validateWorkoutPlan</code>, and <code class="ic">runPlanAudit</code> verify the result afterwards.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">4 architectural patterns to highlight in your interview</h4>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">1. Never Call AI from the Frontend</p>
+        <p class="mt-1 text-sm text-storm-300">All AI calls happen inside the Express backend. This protects API keys, stops prompt injection from bypassing safety rules, and logs every generation to <code class="ic">ai_audit_logs</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="filter" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">2. Constrained Candidate Hydration</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">loadCatalogCandidatesFromDb</code> in <code class="ic">src/services/workout-generator/candidates.ts</code> queries <code class="ic">exercise_catalog</code> and filters out joint conflicts first. The LLM picks only safe <code class="ic">exerciseId</code>s. Then <code class="ic">hydratePlanFromCatalog</code> in <code class="ic">src/services/workout-generator/plan-hydration.ts</code> maps them back to DB records.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="list-checks" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">3. Deterministic Safety Gate After Synthesis</p>
+        <p class="mt-1 text-sm text-storm-300">After the LLM returns a plan, deterministic TypeScript rules (<code class="ic">validateWorkoutPlan</code> and <code class="ic">runPlanAudit</code>) verify movement patterns, volume limits, and clinical contraindications.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">4. Zero Fake Fallbacks (Fail Safely)</p>
+        <p class="mt-1 text-sm text-storm-300">If the AI times out or fails safety checks, we write a record to <code class="ic">ai_audit_logs</code>. Then we return <code class="ic">HTTP 409 Conflict</code> (or <code class="ic">503</code>) with <code class="ic">traceId</code> and <code class="ic">auditLogId</code>.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Hardcoded Fake Fallback Plan</p>
+        <p class="mt-3 text-storm-200">Hides backend AI failures by returning a generic dummy workout when the LLM fails or times out.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ ignores a user's knee injury (clinically dangerous)</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Fail Safely with Traceability</p>
+        <p class="mt-3 text-storm-200">Logs the exact prompt, model latency, and failure reason to <code class="ic">ai_audit_logs</code>, then returns <code class="ic">409 Conflict</code> (or <code class="ic">503</code>) with <code class="ic">traceId</code> and <code class="ic">auditLogId</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ zero unsafe workouts and instant root-cause lookup</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ex-09" data-toc="1.9 RFC 7807 errors" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.9</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Error Middleware · RFC 7807 · Log Noise Control</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Central error handling</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Express identifies an error handler by checking <code class="ic">fn.length === 4</code> at runtime. Every failure exits through <mark class="hl">one RFC 7807 Problem Details contract</mark>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Every hospital department uses the same incident form. Whether an issue happens in reception, the lab, or pharmacy, any doctor can read any report in seconds.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">The <code class="ic">fn.length === 4</code> runtime gotcha</h4>
+    <p class="text-storm-200 max-w-3xl">In Express, an error-handling middleware is identified by having <strong>exactly 4 arguments</strong>: <code class="ic">(error, req, res, next)</code>.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap · Express Checks <code class="ic">fn.length === 4</code></p>
+      <p class="mt-2 text-white font-semibold">Omitting <code class="ic">_next</code> makes <code class="ic">fn.length === 3</code> and silently skips your error handler</p>
+      <p class="mt-1 text-sm text-storm-200">Even if you don't call <code class="ic">next</code> inside your error handler, you must include <code class="ic">_next</code> in <code class="ic">(error, req, res, _next)</code>. If you write <code class="ic">(error, req, res)</code>, <code class="ic">fn.length</code> is <code class="ic">3</code>, so Express treats it as a normal middleware and skips it when an error occurs.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> 3 arguments: <code class="ic">(error, req, res)</code></p>
+        <p class="mt-3 text-storm-200">JavaScript function <code class="ic">fn.length</code> is <code class="ic">3</code>. Express registers it as a normal request middleware.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ skipped completely when next(err) is called</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> 4 arguments: <code class="ic">(error, req, res, _next)</code></p>
+        <p class="mt-3 text-storm-200">JavaScript function <code class="ic">fn.length</code> is <code class="ic">4</code>. <code class="ic">void _next;</code> satisfies the linter while keeping the 4th parameter.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ catches every thrown error across the app</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">RFC 7807 / RFC 9457 (<code class="ic">application/problem+json</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">In <code class="ic">src/middleware/error.ts</code>, PhysioCoach AI replaces ad-hoc error payloads with RFC 7807 Problem Details for HTTP APIs.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Inconsistent Route Error Shapes</p>
+        <p class="mt-3 text-storm-200">One route returns <code class="ic">{ error: "bad" }</code> while another returns <code class="ic">{ msg: "failed", code: 12 }</code>.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ frontend needs custom error parsing per endpoint</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> One RFC 7807 Contract</p>
+        <p class="mt-3 text-storm-200">Every error returns <code class="ic">Content-Type: application/problem+json</code> with <code class="ic">type</code>, <code class="ic">title</code>, <code class="ic">detail</code>, <code class="ic">instance</code>, <code class="ic">traceId</code>, and <code class="ic">auditLogId</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ one predictable schema for clients and logs</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/middleware/error.ts" data-lang="ts" data-hl="1-2,9-11,15-24"><code>export const errorHandler: ErrorRequestHandler = (error: unknown, req, res, _next) =&gt; {
+  void _next;
+  const candidate: HttpError =
+    error instanceof Error ? error : new Error('Unexpected API error.');
+  const status = resolveStatusCode(error, candidate);
+  const traceId = req.traceId || crypto.randomUUID();
+  const auditLogId = candidate.auditLogId || req.auditLogId || null;
+
+  if (status &gt;= 500) {
+    console.error('request.failed', { traceId, auditLogId, error: candidate.message });
+  }
+
+  res
+    .status(status)
+    .type('application/problem+json')
+    .json({
+      type: `https://physiocoach.devbench.ir/problems/${status}`,
+      title: STATUS_TITLES[status] || 'Request Failed',
+      detail: candidate.message || 'Unexpected API error.',
+      instance: req.originalUrl,
+      traceId,
+      auditLogId,
+      ...(error instanceof ZodError ? { errors: error.issues } : {}),
+    });
+};</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">(error: unknown, req, res, _next)</code> keeps <code class="ic">fn.length === 4</code> so Express invokes it on failure.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">if (status &gt;= 500)</code> logs only server crashes, ignoring expected <code class="ic">4xx</code> client mistakes.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200">Sets <code class="ic">application/problem+json</code> and attaches <code class="ic">traceId</code>, <code class="ic">auditLogId</code>, and optional Zod <code class="ic">errors</code>.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="Sample 400 response (application/problem+json)" data-lang="json" data-hl="2-8"><code>{
+  "type": "https://physiocoach.devbench.ir/problems/400",
+  "title": "Bad Request",
+  "detail": "Validation failed.",
+  "instance": "/api/v1/workout-sessions",
+  "traceId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "auditLogId": null,
+  "errors": [{ "path": ["dayIndex"], "message": "Expected number" }]
+}</code></pre>
+      <ul class="space-y-2.5 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">type</code>: stable URI identifying the problem category by HTTP status.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">title</code>: short human-readable summary from <code class="ic">STATUS_TITLES[status]</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200"><code class="ic">detail</code>: specific message (<code class="ic">candidate.message</code>) for this occurrence.</span></li>
+        <li class="flex gap-3"><span class="badge-num">4</span><span class="text-storm-200"><code class="ic">instance</code>: full request path from <code class="ic">req.originalUrl</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">5</span><span class="text-storm-200"><code class="ic">traceId</code>: distributed request UUID from <code class="ic">req.traceId</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">6</span><span class="text-storm-200"><code class="ic">auditLogId</code>: links AI failures directly to <code class="ic">ai_audit_logs</code> (or <code class="ic">null</code>).</span></li>
+        <li class="flex gap-3"><span class="badge-num">7</span><span class="text-storm-200"><code class="ic">errors</code>: field-level <code class="ic">error.issues</code> array included when <code class="ic">error instanceof ZodError</code>.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Automatic classification &amp; log noise control</h4>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-left">
+          <tr>
+            <th class="p-4 font-medium text-storm-300 w-1/3">Error source in <code class="ic">resolveStatusCode()</code></th>
+            <th class="p-4 font-semibold text-white">HTTP Status</th>
+            <th class="p-4 font-semibold text-vivid-300"><code class="ic">console.error</code> alert?</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 text-storm-200"><code class="ic">ZodError</code></td>
+            <td class="p-4 font-mono text-storm-100">400 Bad Request</td>
+            <td class="p-4 text-vivid-300">No (client input mistake)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-200"><code class="ic">AuthError</code></td>
+            <td class="p-4 font-mono text-storm-100">401 / 403 / 409</td>
+            <td class="p-4 text-vivid-300">No (domain auth outcome)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-200">Unknown crash / unhandled <code class="ic">Error</code></td>
+            <td class="p-4 font-mono text-coral-300">500 Internal Server Error</td>
+            <td class="p-4 text-coral-300">Yes (<code class="ic">status &gt;= 500</code> logs <code class="ic">request.failed</code>)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-l-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> Key idea</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">Log only <code class="ic">status &gt;= 500</code>. Never pollute error monitoring alerts when a user types a wrong password (<code class="ic">401</code>)—only alert when the server itself fails.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-10" data-toc="1.10 Rate limiting" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.10</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Reverse Proxies · Retry-After · Bounded Memory</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Rate limiting behind proxies</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Behind Cloudflare, the TCP socket IP is the proxy itself. Rate limiting must <mark class="hl">read the trusted edge header</mark> and prune its own memory without global timers.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="user-check" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">A club bouncer counts entries per person by checking each guest's ID card (<code class="ic">cf-connecting-ip</code>), not the taxi (<code class="ic">req.socket.remoteAddress</code>) that brought everyone to the door.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Why <code class="ic">cf-connecting-ip</code> comes before <code class="ic">x-forwarded-for</code></h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">src/auth/rate-limit.ts</code> protects <code class="ic">/auth/login</code>, <code class="ic">/auth/register</code>, and <code class="ic">/auth/refresh</code> from brute-force credential stuffing. Behind Cloudflare, <code class="ic">req.socket.remoteAddress</code> is Cloudflare's proxy IP, not the user's IP.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Behind Cloudflare, the TCP socket IP is Cloudflare's proxy IP while the real client IP is stamped in the cf-connecting-ip header</title>
+          <rect x="14" y="55" width="170" height="110" rx="14" fill="#153139" stroke="#2E464C"/>
+          <text x="99" y="92" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Real Client</text>
+          <text x="99" y="116" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">203.0.113.42</text>
+          <text x="99" y="138" text-anchor="middle" fill="#879497" font-size="13">true user IP</text>
+
+          <line x1="184" y1="110" x2="244" y2="110" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="252" y="45" width="210" height="130" rx="14" fill="#153139" stroke="#02EFF0"/>
+          <text x="357" y="78" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Cloudflare Edge Proxy</text>
+          <text x="357" y="102" text-anchor="middle" fill="#81F7F7" font-size="13">overwrites spoofed headers</text>
+          <text x="357" y="124" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">cf-connecting-ip: 203.0.113.42</text>
+          <text x="357" y="148" text-anchor="middle" fill="#FF7A6B" font-size="13">socket IP: 172.68.10.5</text>
+
+          <line x1="462" y1="88" x2="520" y2="72" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+          <line x1="462" y1="138" x2="520" y2="154" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+          <rect x="528" y="30" width="218" height="72" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="637" y="60" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Header: cf-connecting-ip</text>
+          <text x="637" y="82" text-anchor="middle" fill="#81F7F7" font-size="13">203.0.113.42 (rate-limit per user)</text>
+
+          <rect x="528" y="124" width="218" height="72" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="637" y="154" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">req.socket.remoteAddress</text>
+          <text x="637" y="176" text-anchor="middle" fill="#879497" font-size="13">172.68.10.5 (blocks all users!)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Cloudflare sets <code class="ic">cf-connecting-ip</code> to the true client IP and overwrites any spoofed header from the client (example IPs).</figcaption>
+    </figure>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Header priority in <code class="ic">getClientKey(c)</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">01 · primary</p>
+          <p class="font-semibold text-white"><code class="ic">cf-connecting-ip</code></p>
+          <p class="text-xs text-storm-300">trusted Cloudflare client IP</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02 · first hop</p>
+          <p class="font-semibold text-white"><code class="ic">x-forwarded-for</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">.split(',')[0]?.trim()</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03 · fallback</p>
+          <p class="font-semibold text-white"><code class="ic">x-real-ip</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">realIp?.trim()</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04 · default</p>
+          <p class="font-semibold text-white"><code class="ic">'unknown'</code></p>
+          <p class="text-xs text-storm-300">when no header exists</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/auth/rate-limit.ts" data-lang="ts" data-hl="2-4,6-8,11"><code>function getClientKey(c: ExpressRouteContext): string {
+  const cfConnectingIp = c.req.header('cf-connecting-ip');
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  const forwardedFor = c.req.header('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0]?.trim() || 'unknown';
+  }
+
+  const realIp = c.req.header('x-real-ip');
+  return realIp?.trim() || 'unknown';
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">cf-connecting-ip</code> is checked first because Cloudflare overwrites any client-spoofed value.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">x-forwarded-for</code> can contain <code class="ic">client, proxy1, proxy2</code>, so <code class="ic">.split(',')[0]?.trim()</code> extracts the original client IP.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Standard <code class="ic">Retry-After</code> header &amp; bounded memory</h4>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">5</p>
+        <p class="mt-1 text-sm text-storm-300">attempts per window</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">60 s</p>
+        <p class="mt-1 text-sm text-storm-300">rate-limit window</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-white">1,000</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">authBuckets</code> prune threshold</p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">429</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">Too Many Requests</code></p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Bare <code class="ic">429 Too Many Requests</code></p>
+        <p class="mt-3 text-storm-200">Rejects the request after 5 attempts in 60 seconds, but omits when the window resets.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ mobile app cannot show a countdown or backoff</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> <code class="ic">429</code> + <code class="ic">Retry-After: 37</code> (example)</p>
+        <p class="mt-3 text-storm-200">Sets <code class="ic">c.header('retry-after', String(Math.ceil((bucket.resetAt - now) / 1000)))</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ tells clients the exact seconds to wait before retry</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">How <code class="ic">authBuckets</code> stays small without a timer</figcaption>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">New IP → new bucket</p>
+          <p class="text-xs text-storm-300">Each client key adds one entry to the <code class="ic">Map</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02 · size reaches 1,000</p>
+          <p class="font-semibold text-white">Prune on the next request</p>
+          <p class="text-xs text-storm-300"><code class="ic">pruneExpiredBuckets(now)</code> deletes expired buckets.</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div class="flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Memory stays bounded</p>
+          <p class="text-xs text-storm-300">No <code class="ic">setInterval()</code> needed, which serverless workers forbid at global scope.</p>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">Without pruning, millions of spoofed IPs could fill the <code class="ic">Map</code> until an Out-Of-Memory (OOM) crash.</p>
+    </figure>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> Trap · No <code class="ic">setInterval()</code> at Global Scope in Serverless Workers</p>
+      <p class="mt-2 text-white font-semibold">Background <code class="ic">setInterval()</code> timers are forbidden at global scope in Cloudflare Workers</p>
+      <p class="mt-1 text-sm text-storm-200">An attacker might send requests from millions of spoofed IPs to trigger an Out-Of-Memory (OOM) crash. You cannot rely on a background timer to clean the <code class="ic">Map</code>. Lazy pruning inside the request path at <code class="ic">1,000</code> entries bounds memory without global timers.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-11" data-toc="1.11 Testing Express" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.11</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Ephemeral Port 0 · Fetch Bridge · End-to-End Pipeline</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Testing Express</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Pass port <code class="ic">0</code> to <code class="ic">server.listen(0, '127.0.0.1')</code> so the OS kernel assigns <mark class="hl">a free ephemeral loopback port</mark> to every concurrent test.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="door-open" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">Hardcoding port <code class="ic">8787</code> is a hotel where 50 guests all fight over room 8787. Passing port <code class="ic">0</code> lets the front desk hand every guest any free room and take the key back at checkout.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Why traditional API tests fail</h4>
+    <p class="text-storm-200 max-w-3xl">Most teams fall into one of two traps when testing Express APIs: mocking everything or hardcoding a single port.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> Two Broken Testing Options</p>
+        <p class="mt-3 text-storm-200"><strong>Option A (Mock everything):</strong> Tests stay green while SQL queries or middleware order are broken. <br><strong>Option B (Fixed port <code class="ic">localhost:8787</code>):</strong> Parallel test files crash immediately.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ Error: listen EADDRINUSE: address already in use :::8787</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> Ephemeral Port <code class="ic">0</code> + <code class="ic">.fetch()</code> Bridge</p>
+        <p class="mt-3 text-storm-200"><code class="ic">server.listen(0, '127.0.0.1')</code> asks the macOS/Linux kernel for any unused loopback port right now. It runs a real HTTP request and closes the server in <code class="ic">finally</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ 50 concurrent Vitest files with zero port collisions</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Ephemeral port <code class="ic">0</code> + <code class="ic">testableApp.fetch</code> in <code class="ic">src/app.ts</code></h4>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Lexend, sans-serif">
+          <title>Concurrent Vitest tests pass port 0 to the OS kernel, receive isolated ephemeral ports 54321 and 54322 on 127.0.0.1, and close them in finally</title>
+          <rect x="14" y="24" width="168" height="80" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="98" y="58" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Vitest Worker #1</text>
+          <text x="98" y="80" text-anchor="middle" fill="#81F7F7" font-size="13">listen(0, '127.0.0.1')</text>
+
+          <rect x="14" y="132" width="168" height="80" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="98" y="166" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">Vitest Worker #2</text>
+          <text x="98" y="188" text-anchor="middle" fill="#81F7F7" font-size="13">listen(0, '127.0.0.1')</text>
+
+          <line x1="182" y1="64" x2="236" y2="64" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+          <line x1="182" y1="172" x2="236" y2="172" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="244" y="24" width="236" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="362" y="56" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">OS Kernel → 127.0.0.1:54321</text>
+          <text x="362" y="79" text-anchor="middle" fill="#FFFFFF" font-size="13">fetch('/api/v1/health')</text>
+
+          <rect x="244" y="132" width="236" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="362" y="164" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">OS Kernel → 127.0.0.1:54322</text>
+          <text x="362" y="187" text-anchor="middle" fill="#FFFFFF" font-size="13">fetch('/api/v1/auth/login')</text>
+
+          <line x1="480" y1="64" x2="534" y2="64" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+          <line x1="480" y1="172" x2="534" y2="172" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="542" y="24" width="204" height="80" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="644" y="56" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">finally { server.close() }</text>
+          <text x="644" y="79" text-anchor="middle" fill="#81F7F7" font-size="13">port 54321 freed cleanly</text>
+
+          <rect x="542" y="132" width="204" height="80" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="644" y="164" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">finally { server.close() }</text>
+          <text x="644" y="187" text-anchor="middle" fill="#81F7F7" font-size="13">port 54322 freed cleanly</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">Each test gets its own OS ephemeral port (<code class="ic">54321</code>, <code class="ic">54322</code>, ...) on loopback <code class="ic">127.0.0.1</code> and releases it in <code class="ic">finally</code>.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app.ts" data-lang="ts" data-hl="2-3,7,14,16"><code>const testableApp = app as unknown as TestableExpressApp;
+testableApp.fetch = async (input, init, bindings) =&gt; {
+  app.locals.workerEnv = bindings ?? {};
+  const server = createServer(app);
+  await new Promise&lt;void&gt;((resolve, reject) =&gt; {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve); // &lt;-- Port 0 = OS assigns a free ephemeral port!
+  });
+
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Test server did not start.');
+    // ... forwards Web Standard Request to http://127.0.0.1:${address.port}
+    return await fetch(`http://127.0.0.1:${address.port}${parsed.pathname}${parsed.search}`, requestInit);
+  } finally {
+    await new Promise&lt;void&gt;((resolve) =&gt; server.close(() =&gt; resolve()));
+  }
+};</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">server.listen(0, '127.0.0.1', resolve)</code> binds an unused ephemeral port on loopback only.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">fetch(...)</code> sends a real HTTP request through Node's TCP stack to <code class="ic">address.port</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200"><code class="ic">finally</code> guarantees <code class="ic">server.close()</code> runs even when an assertion or request fails.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Full HTTP stack verification in every test</h4>
+    <p class="text-storm-200 max-w-3xl">Unlike calling a route handler function directly in a unit test, <code class="ic">app.fetch('/api/v1/health')</code> sends a real HTTP request that crosses the entire middleware chain end-to-end.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">Real pipeline crossed by <code class="ic">app.fetch()</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> Play</button>
+      </div>
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">cors()</code></p>
+          <p class="text-xs text-storm-300">preflight headers</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">express.json()</code></p>
+          <p class="text-xs text-storm-300">stream → <code class="ic">req.body</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">traceId</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">x-request-id</code></p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">authMiddleware</code></p>
+          <p class="text-xs text-storm-300">JWT &amp; allowlist</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">05</p>
+          <p class="font-semibold text-white text-sm">Aliasing</p>
+          <p class="text-xs text-storm-300"><code class="ic">req.url</code> rewrite</p>
+        </div>
+        <div class="self-center text-vivid-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">06</p>
+          <p class="font-semibold text-white text-sm">Route</p>
+          <p class="text-xs text-storm-300">handler execution</p>
+        </div>
+        <div class="self-center text-coral-400 rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-3 py-3">
+          <p class="font-mono text-[11px] text-coral-300">07</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">errorHandler</code></p>
+          <p class="text-xs text-storm-300">RFC 7807 JSON</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ex-12" data-toc="1.12 20 rapid-fire Q&amp;As" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.12</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">Interview Warm-Up · 20 Questions · 60-Second Pitch</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">Rapid-fire cheat sheet</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">Review these <mark class="hl">20 senior backend Q&amp;As</mark> and the 60-second architecture pitch right before your interview.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="zap" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">Real-world picture</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">This cheat sheet is a pilot's pre-flight checklist on the runway. Every system is already built—you are scanning the instruments one last time before takeoff.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Node.js &amp; Express core (1–5)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q1</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">1. Is Node.js single-threaded?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">Your JavaScript code runs on a single thread (the V8 Event Loop).</strong> A heavy synchronous <code class="ic">for</code> loop or <code class="ic">JSON.parse</code> blocks all concurrent users.</p>
+        <p><strong class="text-vivid-300">The C++ runtime (<code class="ic">libuv</code>) and OS kernel are multi-threaded and async.</strong> <code class="ic">libuv</code> uses a background thread pool (default 4 threads) for file I/O, DNS, and crypto (<code class="ic">PBKDF2</code>). It delegates network sockets (<code class="ic">http</code>, PostgreSQL TCP) to OS kernel async APIs (<code class="ic">epoll</code> on Linux, <code class="ic">kqueue</code> on macOS).</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-3 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-3.5">
+          <p class="font-mono text-coral-300 font-semibold">V8 Event Loop (1 thread)</p>
+          <p class="mt-1 text-storm-200">Runs JS callbacks. Blocked by sync loops or huge <code class="ic">JSON.parse</code>.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">libuv Pool (4 threads)</p>
+          <p class="mt-1 text-storm-200">Offloads file I/O, DNS lookups, and <code class="ic">PBKDF2</code> crypto.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">OS Kernel Async</p>
+          <p class="mt-1 text-storm-200"><code class="ic">epoll</code> (Linux) &amp; <code class="ic">kqueue</code> (macOS) multiplex HTTP &amp; Postgres TCP sockets.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q2</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">2. What is the difference between <code class="ic">app.use('/api', fn)</code> and <code class="ic">app.get('/api', fn)</code>?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><code class="ic">app.use</code> matches <strong>any HTTP method</strong> and matches by <strong>path prefix</strong> (<code class="ic">/api</code>, <code class="ic">/api/users</code>, <code class="ic">/api/v1/health</code>), stripping <code class="ic">/api</code> from <code class="ic">req.url</code> inside <code class="ic">fn</code>.</p>
+        <p><code class="ic">app.get</code> matches <strong>only <code class="ic">GET</code> requests</strong> and requires an <strong>exact path match</strong> (<code class="ic">/api</code> only).</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-2 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">app.use('/api', fn)</p>
+          <p class="mt-1 text-storm-200">Any method · Prefix match (<code class="ic">/api/*</code>) · Strips <code class="ic">/api</code> from <code class="ic">req.url</code></p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">app.get('/api', fn)</p>
+          <p class="mt-1 text-storm-200"><code class="ic">GET</code> only · Exact match (<code class="ic">/api</code> only)</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q3</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">3. How does Express know a middleware is an error handler?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>By inspecting <code class="ic">fn.length === 4</code> (<code class="ic">(err, req, res, next)</code>). If you omit the 4th parameter <code class="ic">next</code>, Express treats it as a regular 3-argument middleware and will never call it on error.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q4</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">4. What happens if an error is thrown <em>after</em> <code class="ic">res.write()</code> has already started streaming a response?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Once HTTP headers and initial body bytes are flushed to the TCP socket, you cannot change the HTTP status code to <code class="ic">500</code>. Express's default fallback checks <code class="ic">res.headersSent</code> and closes the socket connection so the client detects an incomplete transfer.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q5</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">5. What is backpressure in Node.js HTTP servers?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Sometimes a fast server reads a large file or DB cursor faster than a slow mobile client can download it. Memory buffers then fill up and crash the server. Using <code class="ic">stream.pipe()</code> or <code class="ic">pipeline()</code> pauses reading when the socket write buffer is full (<code class="ic">write()</code> returns <code class="ic">false</code>). It resumes automatically on the <code class="ic">'drain'</code> event.</p>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-storm-700 text-xs font-mono">
+        <span class="rounded-lg bg-storm-900 border border-storm-600 px-3 py-1.5 text-storm-100">Fast source read</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-coral-500/10 border border-coral-400/40 px-3 py-1.5 text-coral-300">write() returns false</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-storm-600 px-3 py-1.5 text-white">Pause reading</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-vivid-400/15 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">'drain' event</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">Resume stream</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Security &amp; authentication (6–9)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q6</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">6. Why store a SHA-256 hash of a Refresh Token instead of PBKDF2/bcrypt?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">Passwords have low entropy:</strong> Humans pick weak passwords, so they need a <strong>slow</strong> hash (PBKDF2/Argon2) to stop offline brute-forcing.</p>
+        <p><strong class="text-vivid-300">Refresh tokens have high entropy:</strong> They are 32 bytes (256 bits) of cryptographic random data (<code class="ic">crypto.getRandomValues</code>). With <code class="ic">2^256</code> possibilities, they are mathematically impossible to brute-force. A fast cryptographic hash like <code class="ic">SHA-256</code> protects the token against database leaks without wasting CPU time on every token refresh.</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-2 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-3.5">
+          <p class="font-mono text-coral-300 font-semibold">Human Password · Low Entropy</p>
+          <p class="mt-1 text-storm-200">Vulnerable to dictionary attacks → requires slow <code class="ic">PBKDF2</code> (50,000 iterations) or <code class="ic">Argon2</code>.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">32-Byte Token · 2^256 Possibilities</p>
+          <p class="mt-1 text-storm-200">Impossible to brute-force → fast <code class="ic">SHA-256</code> hash protects DB leaks with zero CPU waste.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q7</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">7. How do you defend against Refresh Token theft if you don't store sessions on the server?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>You can't—which is why pure stateless refresh tokens are an anti-pattern. You must store session metadata (<code class="ic">auth_sessions</code>) and track token rotation (<code class="ic">auth_refresh_token_history</code>). If a previously rotated refresh token is presented again, you immediately revoke the entire session family.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q8</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">8. How do you prevent timing attacks during login?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>First, compare password hashes using a constant-time XOR loop (<code class="ic">timingSafeEqual</code>). Second, if the email does not exist in the database, verify the incoming password against <code class="ic">DUMMY_PASSWORD_HASH</code>. That way, "user not found" takes the same ~40 ms of PBKDF2 CPU work as "wrong password".</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q9</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">9. Where should tokens be stored on the client?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Option 1 is <code class="ic">HttpOnly; Secure; SameSite=Lax</code> cookies, which are immune to XSS but require CSRF protection on mutations. Option 2 is in-memory access tokens paired with rotated refresh tokens, strict Content Security Policy, zero XSS vectors, and server-side reuse detection.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">Databases &amp; transactions (10–12)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q10</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">10. What is the N+1 query problem and how do you avoid it in Drizzle?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>You fetch 20 workout sessions (<code class="ic">1</code> query) and then run a <code class="ic">SELECT</code> in a <code class="ic">for</code> loop for each session (<code class="ic">20</code> queries). Fix it by fetching all related exercises in one query with <code class="ic">inArray(exerciseLogs.workoutSessionId, sessionIds)</code> or a SQL <code class="ic">JOIN</code>. Then group the rows in memory with a <code class="ic">Map</code>.</p>
+      </div>
+      <figure class="mt-5 rounded-2xl border border-storm-700 bg-storm-900 p-4">
+        <figcaption class="text-xs font-semibold text-white">Loading 20 workout sessions with their exercises</figcaption>
+        <div data-chart class="mt-3 space-y-3">
+          <div class="grid grid-cols-[9.5rem_1fr_5.5rem] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-3">
+            <span class="text-xs text-storm-200"><code class="ic">for</code> loop N+1 (<code class="ic">1 + 20</code>)</span>
+            <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="21"></div></div>
+            <span class="font-mono text-xs text-coral-300 text-right">21 queries</span>
+          </div>
+          <div class="grid grid-cols-[9.5rem_1fr_5.5rem] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-3">
+            <span class="text-xs text-storm-200"><code class="ic">inArray()</code> + <code class="ic">Map</code></span>
+            <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
+            <span class="font-mono text-xs text-vivid-300 text-right">2 queries</span>
+          </div>
+        </div>
+      </figure>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q11</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">11. How do you prevent race conditions when two requests try to update the same row at the same time?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Use <strong>Optimistic Concurrency Control (Compare-And-Swap)</strong> in a single atomic <code class="ic">UPDATE ... WHERE id = $1 AND refresh_token_hash = $2 RETURNING id</code>. Alternatively, use <strong>Pessimistic Locking</strong> with <code class="ic">SELECT ... FOR UPDATE</code> inside a transaction.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q12</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">12. Why must <code class="ic">prepare: false</code> be set when using PgBouncer or Cloudflare Hyperdrive in transaction mode?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Transaction-mode poolers reassign Postgres backend connections after every transaction. Named prepared statements live on one specific backend connection. The next query can hit a different backend that does not have that prepared statement.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">System design, observability &amp; operations (13–20)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q13</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">13. How do you implement Graceful Shutdown in a containerized Express server?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>Listen for <code class="ic">SIGTERM</code> from Kubernetes/Docker, then execute four ordered steps:</p>
+      </div>
+      <div class="mt-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">1. Stop new traffic</p>
+          <p class="mt-1 text-storm-200">Call <code class="ic">server.close()</code> to stop accepting new connections.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">2. Drain in-flight</p>
+          <p class="mt-1 text-storm-200">Let active HTTP requests finish (with a hard timeout, e.g., 15 seconds).</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">3. Close DB pool</p>
+          <p class="mt-1 text-storm-200">Close the PostgreSQL connection pool (<code class="ic">await sql.end()</code>).</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">4. Exit cleanly</p>
+          <p class="mt-1 text-storm-200">Call <code class="ic">process.exit(0)</code>.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q14</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">14. What is Idempotency and why does <code class="ic">POST /workout-plans/generate</code> use an <code class="ic">inputHash</code>?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>An operation is idempotent if calling it multiple times has the same effect as calling it once. By hashing the user's profile and assessment inputs (<code class="ic">buildPlanInputHash</code>), we can detect duplicate requests, reuse validated context, and correlate audit logs.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q15</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">15. What is the difference between <code class="ic">401 Unauthorized</code>, <code class="ic">403 Forbidden</code>, <code class="ic">409 Conflict</code>, and <code class="ic">422 Unprocessable Entity</code>?</h4>
+      <div class="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-vivid-400">401</p>
+          <p class="mt-1 font-semibold text-white">Who are you?</p>
+          <p class="mt-1 text-storm-300">Missing or expired authentication token.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-vivid-400">403</p>
+          <p class="mt-1 font-semibold text-white">No permission</p>
+          <p class="mt-1 text-storm-300">I know who you are, but you cannot call <code class="ic">/api/v1/admin</code>.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-4">
+          <p class="font-mono text-2xl font-semibold text-coral-300">409</p>
+          <p class="mt-1 font-semibold text-white">State / safety conflict</p>
+          <p class="mt-1 text-storm-300">Duplicate email registration or unsafe AI plan rejection.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-white">422 / 400</p>
+          <p class="mt-1 font-semibold text-white">Invalid payload</p>
+          <p class="mt-1 text-storm-300">Payload syntax or schema validation failed.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q16</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">16. Why attach <code class="ic">x-request-id</code> (<code class="ic">traceId</code>) to every response header and error JSON?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>When a user reports an error in a distributed system, <code class="ic">traceId</code> links every hop. You can <code class="ic">grep</code> logs and query <code class="ic">ai_audit_logs</code> to trace that single request across every service.</p>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-storm-700 text-xs font-mono">
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">PWA</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">Cloudflare Edge</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">Worker</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">Neon Postgres</span>
+        <span class="text-vivid-400">→</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">OpenRouter AI</span>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q17</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">17. How do you handle slow third-party APIs (like LLMs) in Express without taking down your server?</h4>
+      <div class="mt-5 grid gap-2 text-storm-100">
+        <p><strong class="text-vivid-300">1.</strong> Always pass an <code class="ic">AbortSignal.timeout(timeoutMs)</code> to <code class="ic">fetch()</code> so hung sockets never leak memory.</p>
+        <p><strong class="text-vivid-300">2.</strong> Configure ordered fallback models (<code class="ic">primaryModel</code> → <code class="ic">fallbackModels</code>).</p>
+        <p><strong class="text-vivid-300">3.</strong> Validate the third-party response with Zod before touching your database.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q18</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">18. Why should <code class="ic">/api/v1/health</code> run <code class="ic">SELECT 1</code> against the database?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>A shallow health check that returns <code class="ic">{ ok: true }</code> only proves the process is alive. It stays green even when database credentials break or the connection pool deadlocks. Running <code class="ic">SELECT 1</code> and measuring <code class="ic">responseTimeMs</code> verifies true readiness (<code class="ic">200 OK</code> vs <code class="ic">503 Service Unavailable</code>).</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> Interview answer · Q19</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">19. What is Prototype Pollution in Express and how do we prevent it?</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>If an attacker sends JSON like <code class="ic">{"__proto__": {"isAdmin": true}}</code> and your code recursively merges objects without checking keys, they can pollute <code class="ic">Object.prototype</code>. Validating every payload through strict Zod schemas (<code class="ic">z.object({...}).strict()</code>) strips or rejects <code class="ic">__proto__</code> and <code class="ic">constructor</code> keys immediately.</p>
+      </div>
+    </article>
+
+    <blockquote class="reveal relative rounded-3xl brand-glow p-7 md:p-10 overflow-hidden">
+      <i data-lucide="quote" class="absolute right-6 top-6 w-16 h-16 text-vivid-400/25"></i>
+      <p class="text-xs uppercase tracking-[.2em] text-vivid-300 font-semibold">Say it like a senior · Q20 · 60-second pitch</p>
+      <h4 class="mt-2 text-lg md:text-xl font-semibold text-white">20. How would you explain the PhysioCoach AI backend architecture in 60 seconds at the start of an interview?</h4>
+      <p class="mt-4 text-lg md:text-xl text-white font-light leading-relaxed">"PhysioCoach AI's backend is an Express 5 API written in strict TypeScript on Cloudflare Workers. It connects to Neon PostgreSQL through Cloudflare Hyperdrive connection pooling with Drizzle ORM. Every request passes through a fail-closed middleware pipeline: CORS, JSON body parsing, distributed UUID trace stamping, and stateless Web Crypto JWT verification. For authentication, we use PBKDF2-SHA256 with constant-time comparison and dummy-hash verification to stop timing enumeration. We also issue rotating SHA-256-hashed refresh tokens with reuse detection. For AI workout generation, the backend pre-filters a clinical exercise catalog in Postgres and orchestrates OpenRouter models with timeouts and fallbacks. It validates LLM outputs with Zod and deterministic biomechanical safety rules. Finally, it records full audit trails and returns RFC 7807 Problem Details on failure."</p>
+    </blockquote>
+  </div>
+</section>
