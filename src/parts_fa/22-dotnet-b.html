@@ -1,0 +1,936 @@
+<section id="dn-06" data-toc="۲.۶ ارتباطات HTTP، هوش مصنوعی و RAG" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.6</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">IHttpClientFactory · pgvector RAG · ADR 0002</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">ارتباطات تاب‌آور HTTP، هوش مصنوعی و pgvector</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">یکپارچه‌سازی تمیز LLMها و جستجوی برداری با استخر هندلرهای HTTP، حذف تکرارها با هش محتوا، و <mark class="hl">فال‌بک‌های قطعی در C#</mark>.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="car" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">فال‌بک قطعی (Deterministic Fallback) درست مثل اتومبیلی با لاستیک زاپاس است. وقتی لاستیک سرویس خارجی هوش مصنوعی پنچر می‌شود، قوانین کدنویسی‌شده در C# ادامه سفر را بدون توقف ممکن می‌سازند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۱. کلاینت تایپ‌شده <code class="ic">HttpClient</code> با <code class="ic">IHttpClientFactory</code></h4>
+    <p class="text-storm-200 max-w-3xl">در فایل <code class="ic">Program.cs</code>، کلاینت‌های HTTP از طریق <code class="ic">IHttpClientFactory</code> ثبت می‌شوند تا رانتایم مدیریت استخر هندلرها و تازه‌سازی خودکار رکوردهای DNS را به عهده بگیرد.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام ۱: <code class="ic">using var client = new HttpClient()</code> به ازای هر درخواست</p>
+        <p class="mt-2 text-white font-semibold">ماندن سوکت‌ها در وضعیت <code class="ic">TIME_WAIT</code> ← اتمام ظرفیت سوکت‌ها (Socket Exhaustion)</p>
+        <p class="mt-1 text-sm text-storm-200">فراخوانی متد Dispose روی <code class="ic">HttpClient</code> سوکت بنیادین TCP را بی‌درنگ نمی‌بندد. تحت بار ترافیکی بالا، انباشت سوکت‌های رهاشده در وضعیت <code class="ic">TIME_WAIT</code> تمام پورت‌های سیستم‌عامل را مصرف می‌کند.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام ۲: ساخت ساده‌لوحانه کلاینت به صورت Singleton</p>
+        <p class="mt-2 text-white font-semibold">ماندگاری همیشگی رکوردهای قدیمی DNS</p>
+        <p class="mt-1 text-sm text-storm-200">یک نمونه کلاینت با طول‌عمر طولانی، اتصالات را بی‌پایان دوباره مصرف می‌کند و با تغییر IP سرویس‌های ابری در DNS بالادستی، تغییرات را نادیده می‌گیرد.</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>IHttpClientFactory نمونه‌های HttpMessageHandler را تجمیع کرده و برای تازه‌ماندن رکوردهای DNS هر چند دقیقه یک‌بار آن‌ها را می‌چرخاند</title>
+          <rect x="14" y="62" width="185" height="116" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="106" y="98" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">OpenAiCompatibleClient</text>
+          <text x="106" y="122" text-anchor="middle" fill="#81F7F7" font-size="13">IAiClient تایپ‌شده</text>
+          <text x="106" y="146" text-anchor="middle" fill="#879497" font-size="13">پوشش تازه در هر درخواست</text>
+
+          <line x1="199" y1="120" x2="262" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="270" y="24" width="245" height="192" rx="18" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="392" y="52" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">استخر هندلرهای IHttpClientFactory</text>
+
+          <rect x="290" y="68" width="205" height="56" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="392" y="93" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">HttpMessageHandler فعال</text>
+          <text x="392" y="113" text-anchor="middle" fill="#81F7F7" font-size="13">استفاده مجدد میان درخواست‌ها</text>
+
+          <rect x="290" y="138" width="205" height="58" rx="10" fill="#153139" stroke="#2E464C"/>
+          <text x="392" y="163" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">چرخش هر چند دقیقه یک‌بار</text>
+          <text x="392" y="183" text-anchor="middle" fill="#879497" font-size="13">تازه‌سازی امن رکوردهای DNS</text>
+
+          <line x1="515" y1="120" x2="572" y2="120" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="580" y="62" width="146" height="116" rx="16" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="653" y="98" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">استخر گرم TCP</text>
+          <text x="653" y="122" text-anchor="middle" fill="#81F7F7" font-size="13">OpenRouter API</text>
+          <text x="653" y="146" text-anchor="middle" fill="#FFFFFF" font-size="13">بدون جهش در TIME_WAIT</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300"><code class="ic">IHttpClientFactory</code> نمونه‌های <code class="ic">HttpMessageHandler</code> را در یک استخر تجمیع می‌کند تا از اتمام ظرفیت سوکت‌ها جلوگیری شود و هر چند دقیقه یک‌بار آن‌ها را می‌چرخاند تا رکوردهای DNS همواره تازه بمانند.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="api/JobCraft.Api/Program.cs" data-lang="cs" data-hl="1"><code>builder.Services.AddHttpClient&lt;IAiClient, OpenAiCompatibleClient&gt;();</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">کلاس <code class="ic">OpenAiCompatibleClient</code> (خطوط ۵۳ تا ۵۵) را با یک <code class="ic">HttpClient</code> مدیریت‌شده از استخر کارخانه ثبت می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">بخش‌های فراخواننده بدون نیاز به نوشتن مستقیم دستور <code class="ic">new HttpClient()</code>، صرفاً اینترفیس <code class="ic">IAiClient</code> را تزریق می‌کنند.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۲. تایم‌اوت‌های متصل‌به‌هم (<code class="ic">CancellationTokenSource.CreateLinkedTokenSource</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">حتی اگر تنظیم <code class="ic">HttpClient.Timeout</code> برابر با ۹۰ ثانیه باشد، یک فراخوانی ساخت امبدینگ هرگز نباید تا ۹۰ ثانیه سیستم را معلق نگه دارد.</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">90 s</p>
+        <p class="mt-1 text-sm text-storm-300">تایم‌اوت کلی <code class="ic">HttpClient.Timeout</code></p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">25 s</p>
+        <p class="mt-1 text-sm text-storm-300">سقف زمانی امبدینگ در <code class="ic">EmbedAsync</code></p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-white">2 signals</p>
+        <p class="mt-1 text-sm text-storm-300">توکن کلاینت <code class="ic">ct</code> یا تایمر ۲۵ ثانیه‌ای</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">503</p>
+        <p class="mt-1 text-sm text-storm-300">مهار قطعی اختلال توسط قوانین فال‌بک</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">دو سیگنال مجزا یک توکن مشترک در <code class="ic">OpenAiCompatibleClient.EmbedAsync</code> را تحریک می‌کنند</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">توکن کاربر (<code class="ic">ct</code>)</p>
+          <p class="text-xs text-storm-300">با قطع اتصال مرورگر فعال می‌شود</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">تایمر ۲۵ ثانیه‌ای</p>
+          <p class="text-xs text-storm-300"><code class="ic">CancelAfter(TimeSpan.FromSeconds(25))</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03</p>
+          <p class="font-semibold text-white">توکن متصل‌شده (Linked)</p>
+          <p class="text-xs text-storm-300"><code class="ic">CreateLinkedTokenSource(ct)</code></p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">هنگام تحریک</p>
+          <p class="font-semibold text-white">لغو فراخوانی HTTP</p>
+          <p class="text-xs text-storm-300">هرکدام زودتر رخ دهد، اجرای <code class="ic">EmbedAsync</code> را متوقف می‌کند</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="api/JobCraft.Api/Ai/OpenAiCompatibleClient.cs" data-lang="cs" data-hl="1-2"><code>using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+cts.CancelAfter(TimeSpan.FromSeconds(25));</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">متد <code class="ic">CreateLinkedTokenSource(ct)</code> توکن درخواست HTTP ورودی را به منبع توکن محلی جدید پیوند می‌زند (خطوط ۵۶ تا ۵۸).</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">متد <code class="ic">CancelAfter</code> سقف سخت‌گیرانه ۲۵ ثانیه‌ای را بر فراخوانی ساخت امبدینگ اعمال می‌کند.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۳. حذف داده‌های تکراری با هش محتوا برای امبدینگ‌های <code class="ic">pgvector</code></h4>
+    <p class="text-storm-200 max-w-3xl">تولید امبدینگ‌ها هزینه مالی دارد و تاخیر زمانی ایجاد می‌کند. متد <code class="ic">EmbeddingIndex.UpsertProfileAsync</code> هر یک از بندهای رزومه را با الگوریتم SHA-256 هش می‌کند (<code class="ic">Chunker.ComputeHash(c)</code>) تا بندهای تغییرنیافته هرگز دوباره امبد نشوند.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 280" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>حذف داده‌های تکراری با هش محتوا تنها بندهای ویرایش‌شده رزومه را امبد کرده و نزدیک‌ترین همسایه‌ها را در پستگرس کوئری می‌کند</title>
+          <rect x="14" y="20" width="224" height="240" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="126" y="48" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">بندهای رزومه + SHA-256</text>
+
+          <rect x="28" y="64" width="196" height="50" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="126" y="85" text-anchor="middle" fill="#FFFFFF" font-size="13">بند ۱ · هش a3f9</text>
+          <text x="126" y="103" text-anchor="middle" fill="#879497" font-size="13">دست‌نخورده (بدون تغییر)</text>
+
+          <rect x="28" y="126" width="196" height="50" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="126" y="147" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">بند ۲ · هش 91c4</text>
+          <text x="126" y="165" text-anchor="middle" fill="#81F7F7" font-size="13">۱ خط ویرایش‌شده</text>
+
+          <rect x="28" y="188" width="196" height="50" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="126" y="209" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">بند ۳ · هش 7b02</text>
+          <text x="126" y="227" text-anchor="middle" fill="#879497" font-size="13">حذف‌شده از رزومه</text>
+
+          <line x1="238" y1="89" x2="472" y2="66" stroke="#879497" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arw)"/>
+          <line x1="238" y1="151" x2="282" y2="151" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <line x1="238" y1="213" x2="472" y2="162" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+
+          <rect x="290" y="118" width="146" height="66" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="363" y="145" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">Embedding API</text>
+          <text x="363" y="166" text-anchor="middle" fill="#FFFFFF" font-size="13">تنها ۱ فراخوانی HTTP</text>
+
+          <line x1="436" y1="151" x2="472" y2="115" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="480" y="20" width="266" height="240" rx="16" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="613" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">PostgreSQL + pgvector</text>
+
+          <rect x="498" y="60" width="230" height="36" rx="8" fill="#153139" stroke="#2E464C"/>
+          <text x="613" y="83" text-anchor="middle" fill="#FFFFFF" font-size="13">دست‌نخورده ماندن بردارهای بدون تغییر</text>
+
+          <rect x="498" y="104" width="230" height="36" rx="8" fill="#153139" stroke="#02EFF0"/>
+          <text x="613" y="127" text-anchor="middle" fill="#81F7F7" font-size="13">Upsert بردار جدید برای بند ۲</text>
+
+          <rect x="498" y="148" width="230" height="36" rx="8" fill="#153139" stroke="#FF7A6B"/>
+          <text x="613" y="171" text-anchor="middle" fill="#FF7A6B" font-size="13">حذف ردیف مربوط به بند ۳</text>
+
+          <rect x="498" y="196" width="230" height="48" rx="10" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="613" y="217" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">مرتب‌سازی نزدیک‌ترین همسایه در SQL:</text>
+          <text x="613" y="235" text-anchor="middle" fill="#81F7F7" font-size="13">e.Vector!.CosineDistance(queryVec)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">کلاس <code class="ic">EmbeddingIndex.cs</code> (خطوط ۱۲ تا ۵۳) تفاوت هش‌های SHA-256 را با مقادیر موجود در پستگرس مقایسه کرده و نزدیک‌ترین همسایه‌ها را با دستور <code class="ic">OrderBy(e =&gt; e.Vector!.CosineDistance(queryVec))</code> کوئری می‌کند.</figcaption>
+    </figure>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">مثال: ویرایش ۱ خط از رزومه‌ای با ۲۰ بند</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">همه بندها</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="20"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-left">۲۰ فراخوانی</span>
+        </div>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">تفاضل SHA-256</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-left">۱ فراخوانی</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">متد <code class="ic">Chunker.ComputeHash(c)</code> تنها بند ویرایش‌شده را مجدداً امبد می‌کند و تمامی بردارهای دیگر را بدون دستکاری باقی می‌گذارد.</p>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۴. فال‌بک قطعی (<code class="ic">ADR 0002</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">سرویس‌های خارجی هوش مصنوعی ممکن است از دسترس خارج شوند؛ بنابراین فال‌بک قطعی در <code class="ic">AnalysisService.cs</code> ابتدا امتیاز تطابق (<code class="ic">FitScoring.cs</code>) و بررسی شرایط ویزا (<code class="ic">EligibilityRules.cs</code>) را محاسبه می‌کند. سپس تنها در صورت در دسترس بودن هوش مصنوعی، تحلیل‌های آن را بر روی نتایج تلفیق می‌نماید.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">تحلیل با اولویت محاسبات قطعی در <code class="ic">AnalysisService.cs</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">01</p>
+          <p class="font-semibold text-white">ابتدا قوانین C#</p>
+          <p class="text-xs text-storm-300">امتیاز تطابق (<code class="ic">FitScoring.cs</code>) و شرایط ویزا (<code class="ic">EligibilityRules.cs</code>)</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">فراخوانی OpenRouter</p>
+          <p class="text-xs text-storm-300">تلفیق بینش‌های هوش مصنوعی در صورت در دسترس بودن</p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">03</p>
+          <p class="font-semibold text-white">خطای <code class="ic">503</code> یا Timeout</p>
+          <p class="text-xs text-storm-300">هوش مصنوعی خارجی قطع یا زمان‌بر می‌شود</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04</p>
+          <p class="font-semibold text-white">تحلیل معتبر و کاربردی</p>
+          <p class="text-xs text-storm-300">امتیاز تطابق و وضعیت ویزای قطعی بازگردانده می‌شود؛ بدون هیچ صفحه خطایی</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-07" data-toc="۲.۷ تست‌نویسی دات‌نت" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.7</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">WebApplicationFactory · Pure Domain · Fault Injection</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">تست‌نویسی در سطح یک مهندس ارشد</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">مجموعه تست‌های شکننده مبتنی بر Mock را با <mark class="hl">تست‌های دامنه بدون Mock</mark> و تست‌های خط لوله واقعی روی یک برنچ تست پایگاه داده جایگزین کنید.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="siren" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">تست تزریق خطا (Fault Injection) درست مثل مانور آتش‌نشانی با دود واقعی است، نه صرفاً نصب پوستر آتش روی دیوار! شما عمداً کلاینت هوش مصنوعی را از کار می‌اندازید و تایید می‌کنید که پایپ‌لاین واقعی همچنان اطلاعات را ذخیره کرده و کد وضعیت <code class="ic">200 OK</code> بازمی‌گرداند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">جهنم Mock در برابر راستی‌آزمایی معماری واقعی</h4>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> جهنم Mock (۵۰۰ تست <code class="ic">Mock&lt;IRepository&gt;</code>)</p>
+        <p class="mt-3 text-storm-200">تست‌ها <code class="ic">Mock&lt;IRepository&gt;</code> را طوری پیکربندی می‌کنند که یک لیست ساختگی را برگرداند و صرفاً چک می‌کنند که آیا سرویس همان لیست ساختگی را بازگردانده است یا خیر.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">← کوئری SQL در پروداکشن کرش می‌کند، در حالی که هر ۵۰۰ تست ساختگی سبز پاس می‌شوند</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> مجموعه تست سنیور در <code class="ic">JobCraft.Api.Tests</code></p>
+        <p class="mt-3 text-storm-200">توابع ایستای خالص با صفر وابستگی به Mock اجرا می‌شوند، و کلاس <code class="ic">WebApplicationFactory&lt;Program&gt;</code> رفتارهای واقعی SQL در EF Core را روی یک برنچ تست در Neon می‌سنجد.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">← باگ‌های واقعی عبارات منظم (Regex)، کوئری‌های SQL، تزریق وابستگی (DI) و قطعی‌های سیستم کشف می‌شوند</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۱. تست‌های دامنه خالص</p>
+        <p class="mt-1 text-sm text-storm-300">کلاس <code class="ic">DomainRulesTests.cs</code> قوانین <code class="ic">FitScoring</code>، <code class="ic">EligibilityRules</code>، <code class="ic">ResumeLimits</code> و <code class="ic">CoverLetterGuard</code> را بدون هیچ Mock تست می‌کند.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="database" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۲. تست‌های یکپارچگی واقعی</p>
+        <p class="mt-1 text-sm text-storm-300">کلاس <code class="ic">ApiIntegrationTests.cs</code> خط لوله <code class="ic">WebApplicationFactory&lt;Program&gt;</code> را به همراه یک برنچ اختصاصی تست پستگرس در Neon بالا می‌آورد.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۳. تست‌های تزریق خطا</p>
+        <p class="mt-1 text-sm text-storm-300">کلاس <code class="ic">ThrowingAiClient</code> یک قطعی شبیه‌سازی‌شده در OpenRouter ایجاد می‌کند تا اثبات کند قوانین فال‌بک داده‌ها را در پستگرس ذخیره کرده و پاسخ <code class="ic">200 OK</code> می‌دهند.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۱. تست‌های دامنه خالص (<code class="ic">DomainRulesTests.cs</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">از آنجا که <code class="ic">FitScoring</code>، <code class="ic">EligibilityRules</code>، <code class="ic">ResumeLimits</code> و <code class="ic">CoverLetterGuard</code> توابع ایستای خالص و بدون هیچ وابستگی جانبی هستند، تست‌ها رشته‌های چالش‌برانگیز دنیای واقعی را ارسال کرده و خروجی دقیق را ارزیابی می‌کنند.</p>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-right">
+          <tr>
+            <th class="p-4 font-semibold text-white w-1/3">رشته چالش‌برانگیز در دنیای واقعی</th>
+            <th class="p-4 font-semibold text-coral-300 w-1/3">علت شکست تطابق سطحی و ساده‌لوحانه</th>
+            <th class="p-4 font-semibold text-vivid-300 w-1/3">نتیجه مورد انتظار در <code class="ic">DomainRulesTests.cs</code></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 font-mono text-white"><code class="ic">"Helsinki, Finland"</code></td>
+            <td class="p-4 text-storm-200">شامل حروف <code class="ic">"nl"</code> درون نام <code class="ic">"Finland"</code> است.</td>
+            <td class="p-4 text-vivid-300">با کشور هلند (<code class="ic">nl</code>) مطابقت داده نمی‌شود؛ متد <code class="ic">EligibilityRules</code> مرزهای واژگان را ارزیابی می‌کند.</td>
+          </tr>
+          <tr>
+            <td class="p-4 font-mono text-white"><code class="ic">"ready to go to meetups"</code></td>
+            <td class="p-4 text-storm-200">از فعل متداول انگلیسی <code class="ic">"go"</code> استفاده می‌کند.</td>
+            <td class="p-4 text-vivid-300">با زبان برنامه‌نویسی <code class="ic">Go</code> در الگوریتم <code class="ic">FitScoring</code> اشتباه گرفته نمی‌شود.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۲. تست‌های یکپارچگی واقعی (<code class="ic">ApiIntegrationTests.cs</code> و <code class="ic">TestDatabase.cs</code>)</h4>
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">خط لوله درون‌حافظه‌ای ASP.NET Core متصل به برنچ تست در Neon</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white"><code class="ic">WebApplicationFactory&lt;Program&gt;</code></p>
+          <p class="text-xs text-storm-300">خط لوله واقعی ASP.NET Core را درون حافظه بالا می‌آورد</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white"><code class="ic">TestDatabase.cs</code></p>
+          <p class="text-xs text-storm-300">شرط <code class="ic">HostOf(test) != HostOf(real)</code> را اعتبارسنجی می‌کند</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">برنچ تست در Neon</p>
+          <p class="text-xs text-storm-300">کوئری‌های واقعی SQL را روی یک برنچ ایزوله تست در دیتابیس اجرا می‌کند</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی · گارد محافظتی پایگاه داده در <code class="ic">TestDatabase.cs</code></p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">فایل <code class="ic">TestDatabase.cs</code> پیش از اجرای هر تست، شرط <code class="ic">HostOf(test) != HostOf(real)</code> را بررسی می‌کند تا تست‌های یکپارچگی تحت هیچ شرایطی امکان دسترسی یا آسیب به داده‌های واقعی پروداکشن را نداشته باشند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۳. تست تزریق خطا با <code class="ic">ThrowingAiClient</code></h4>
+    <p class="text-storm-200 max-w-3xl">در فایل <code class="ic">ApiIntegrationTests.cs</code> (خطوط ۱۵ تا ۲۸)، تنها سرویس‌هایی که در کانتینر DI جایگزین می‌شوند، کلاینت‌های پولی هوش مصنوعی خارجی هستند. به جای بازگرداندن داده‌های ساختگی موفق، کلاس <code class="ic">ThrowingAiClient</code> عمداً یک استثنا (Exception) پرتاب می‌کند.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">تزریق خطا در اندپوینت <code class="ic">POST /applications/{id}/analyze</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white"><code class="ic">POST /applications/{id}/analyze</code></p>
+          <p class="text-xs text-storm-300">ارسال درخواست به اندپوینت واقعی درون حافظه</p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">02</p>
+          <p class="font-semibold text-white"><code class="ic">ThrowingAiClient</code></p>
+          <p class="text-xs text-storm-300">پرتاب خطای <code class="ic">HttpRequestException("Simulated OpenRouter failure")</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">فال‌بک + ذخیره در Postgres</p>
+          <p class="text-xs text-storm-300">مهار قطعی، اجرای قوانین قطعی C# و ذخیره نتیجه در پایگاه داده واقعی</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04</p>
+          <p class="font-semibold text-white"><code class="ic">200 OK</code></p>
+          <p class="text-xs text-storm-300">بازگرداندن تحلیل قطعی و کارآمد</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-08" data-toc="۲.۸ پنج نقشه راه معماری" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.8</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">ASP.NET Core 10 Minimal APIs · EF Core · Postgres · Angular 20</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">۵ نقشه راه معماری برای ساخت پروژه</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">پنج معماری سیستم که ترکیب <mark class="hl">ASP.NET Core 10، Postgres و Angular 20</mark> را برای اثبات تسلط عمیق بک‌اند در مصاحبه به نمایش می‌گذارند.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="layers" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">یک پروژه معماری برای رزومه مهندس ارشد مانند سیمولاتور پرواز است، نه یک موشک کاغذی! هر یک از این طرح‌ها حالت‌های شکست واقعی مانند فشار معکوس (Backpressure)، هجوم به کش (Cache Stampede)، تداخل‌های همزمانی (Concurrency Conflicts) و گرد کردن محاسبات مالی را به چالش می‌کشند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-8">
+    <!-- Blueprint 1 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="terminal" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه راه ۱ · پروژه مستقل یا برش <code class="ic">Features/InterviewPrep</code></span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">سامانه چندمرحله‌ای شبیه‌ساز و ارزیاب مصاحبه‌های فنی</h4>
+          <p class="mt-2 text-storm-200">این ابزار با دریافت شرح موقعیت شغلی و رزومه شما، سوالات تخصصی طراحی سیستم و کدنویسی مربوط به آن نقش را تولید می‌کند. سپس پاسخ‌های متنی یا پیاده‌سازی‌شده از صدای شما را در یک محیط کاری زمان‌بندی‌شده ضبط کرده و با یک بارم سخت‌گیرانه، از طریق RAG و بررسی‌های قطعی در C# ارزیابی می‌نماید.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته بک‌اند (.NET 10)</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><i data-lucide="radio" class="w-3.5 h-3.5 text-vivid-400"></i> Server-Sent Events (SSE)</span>
+            <span class="chip"><code class="ic">Results.Stream(...)</code></span>
+            <span class="chip"><code class="ic">TypedResults.ServerSentEvents(...)</code></span>
+            <span class="chip"><code class="ic">IAsyncEnumerable&lt;T&gt;</code></span>
+            <span class="chip"><code class="ic">pgvector</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">ارسال رویدادها از سرور (SSE):</strong> استریم کلمه به کلمه بازخوردهای مصاحبه‌کننده هوش مصنوعی به انگولار با استفاده از متد <code class="ic">Results.Stream(...)</code> یا <code class="ic">TypedResults.ServerSentEvents(...)</code>.</li>
+            <li><strong class="text-white">ماشین وضعیت دامنه:</strong> انتقال‌های وضعیت خالص در C# (شامل <code class="ic">NotStarted -&gt; QuestionAsked -&gt; AnswerSubmitted -&gt; Graded</code>) که از جهش‌های غیرمجاز میان وضعیت‌ها جلوگیری می‌کند.</li>
+            <li><strong class="text-white">جستجوی نقاط ضعف با <code class="ic">pgvector</code>:</strong> تبدیل پاسخ‌های پیشین به بردار (Embedding) برای یافتن مباحثی از C# یا سیستم‌های توزیع‌شده که نمره آن‌ها در ۳۰ روز گذشته کمتر از ۶۰٪ بوده است.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته انگولار ۲۰</p>
+          <p class="text-sm text-storm-200">تایمر شمارش معکوس واکنش‌گرا با <code class="ic">signal()</code> و <code class="ic">computed()</code>، محیط پاسخ‌نویسی دوگانه مارک‌داون، و نمودار راداری نمرات مباحث مختلف.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی برای مصاحبه سنیور</p>
+        <p class="mt-2 text-white font-medium">چگونگی مدیریت استریم پاسخ‌های HTTP با <code class="ic">IAsyncEnumerable&lt;T&gt;</code> و کنترل فشار معکوس (Backpressure) هنگام قطع اتصال کلاینت در میانه ارسال جریان داده.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 2 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه راه ۲ · موتور تحویل رویداد</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">موتور ارسال وب‌هوک و تحویل رویداد با توان پردازشی بالا ("HookRelay")</h4>
+          <p class="mt-2 text-storm-200">وب‌هوک‌ها را از سرویس‌هایی نظیر Stripe، GitHub و تلگرام دریافت کرده و به اندپوینت‌های مقصد توزیع می‌کند. این سامانه شامل تلاش مجدد با توقف نمایی (Exponential Backoff)، راستی‌آزمایی امضا و رابط کاربری بازپخش نامه‌های مرده (Dead-letter Queue) است.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته بک‌اند (.NET 10)</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">Channel.CreateBounded&lt;WebhookEvent&gt;(10_000)</code></span>
+            <span class="chip"><code class="ic">FOR UPDATE SKIP LOCKED</code></span>
+            <span class="chip"><code class="ic">CryptographicOperations.FixedTimeEquals</code></span>
+            <span class="chip">Polly / <code class="ic">Microsoft.Extensions.Http.Resilience</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">کانال با ظرفیت محدود (<code class="ic">Bounded Channel&lt;T&gt;</code>):</strong> دستور <code class="ic">Channel.CreateBounded&lt;WebhookEvent&gt;(10_000)</code> زمان دریافت و ثبت درخواست را زیر ۵ میلی‌ثانیه نگه داشته و فشار معکوس را مهار می‌کند.</li>
+            <li><strong class="text-white">دستور <code class="ic">FOR UPDATE SKIP LOCKED</code> در پستگرس:</strong> چندین پردازشگر پس‌زمینه بدون قفل کردن کل جدول و بدون ارسال تکراری، ارسال‌های ناموفق و قابل‌تلاش‌مجدد را پردازش می‌کنند.</li>
+            <li><strong class="text-white">راستی‌آزمایی HMAC-SHA256:</strong> بررسی امضا بدون تخصیص حافظه (Zero-allocation) به کمک متد <code class="ic">CryptographicOperations.FixedTimeEquals</code> که از حملات مبتنی بر زمان (Timing Attacks) ممانعت می‌کند.</li>
+            <li><strong class="text-white">ابزار Polly / <code class="ic">Microsoft.Extensions.Http.Resilience</code>:</strong> خطوط لوله استاندارد تاب‌آوری مجهز به مدارشکن (Circuit Breaker) هنگام از دسترس خارج شدن سرور مقصد.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته انگولار ۲۰</p>
+          <p class="text-sm text-storm-200">جدول زنده جریان رویدادها، نمایشگر مقایسه‌ای (Diff) ساختار JSON، و اکشن‌های گروهی تک‌کلیکه برای «بازپخش نامه‌های مرده (Dead Letters)».</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی برای مصاحبه سنیور</p>
+        <p class="mt-2 text-white font-medium">تشریح کلیدهای عدم‌تکرار (Idempotency Keys)، تضمین تحویل حداقل یک‌بار (At-Least-Once Delivery)، و چگونگی تبدیل پستگرس به صف پیام‌های همزمان بدون قفل به کمک <code class="ic">FOR UPDATE SKIP LOCKED</code>.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 3 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sliders" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه راه ۳ · صفحه کنترل (Control Plane)</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">کنترل‌پنل توزیع‌شده فلیپ‌پرچم‌ها (Feature Flags) و محدودسازی نرخ درخواست (Rate-Limiting)</h4>
+          <p class="mt-2 text-storm-200">یک پنل مدیریت که تیم‌ها در آن بدون نیاز به استقرار مجدد کدها، پرچم‌های ویژگی را تغییر می‌دهند، درصد انتشار تدریجی را تنظیم کرده و محدودیت نرخ درخواست را به ازای هر مسیر مشخص می‌سازند؛ به عنوان مثال فعال‌سازی فرایند پرداخت جدید تنها برای ۲۰٪ از کاربران کشور هلند.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته بک‌اند (.NET 10)</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">HybridCache</code></span>
+            <span class="chip"><code class="ic">XxHash32</code></span>
+            <span class="chip"><code class="ic">PartitionedRateLimiter</code></span>
+            <span class="chip"><code class="ic">xmin</code> / <code class="ic">IsRowVersion()</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white"><code class="ic">HybridCache</code> در دات‌نت ۹ و ۱۰:</strong> ترکیب کش سریع L1 درون‌حافظه‌ای با کش توزیع‌شده L2 و محافظت خودکار در برابر هجوم ناگهانی به کش (Cache Stampede). حتی اگر ۱۰۰۰ درخواست همزمان با کش خالی مواجه شوند، تنها ۱ کوئری به پستگرس ارسال می‌شود.</li>
+            <li><strong class="text-white">هشینگ قطعی:</strong> قانون خالص در C# با استفاده از <code class="ic">XxHash32</code> روی فرمول <code class="ic">(UserId + FlagKey) % 100</code> به هر کاربر یک تجربه پایدار از انتشار تدریجی می‌دهد، بدون آنکه نیازی به ذخیره وضعیت کاربر در دیتابیس باشد.</li>
+            <li><strong class="text-white">میان‌افزار محدودسازی نرخ:</strong> سیاست‌های سفارشی <code class="ic">PartitionedRateLimiter</code> که بر اساس قوانین کش‌شده به‌صورت پویا هدایت می‌شوند.</li>
+            <li><strong class="text-white">کنترل همزمانی خوش‌بینانه:</strong> استفاده از ستون سیستمی <code class="ic">xmin</code> در پستگرس (<code class="ic">IsRowVersion()</code> در EF Core) تا ویرایش‌های همزمان پرچم‌ها منجر به خطای <code class="ic">DbUpdateConcurrencyException</code> و تولید خروجی استاندارد <code class="ic">409 Conflict</code> در ساختار <code class="ic">ProblemDetails</code> شود.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته انگولار ۲۰</p>
+          <p class="text-sm text-storm-200">اسلایدرهای تعیین درصد انتشار، تایم‌لاین لاگ‌های حسابرسی، و شبیه‌ساز آنی قوانین («تست کنید کاربر X در کشور هلند چه خواهد دید»).</p>
+        </div>
+      </div>
+
+      <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+        <div class="overflow-x-auto">
+          <svg viewBox="0 0 700 130" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+            <title>رول‌اوت قطعی با فرمول XxHash32(UserId + FlagKey) % 100 &lt; 20</title>
+            <rect x="12" y="28" width="168" height="74" rx="12" fill="#153139" stroke="#2E464C"/>
+            <text x="96" y="58" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">UserId + FlagKey</text>
+            <text x="96" y="80" text-anchor="middle" fill="#879497" font-size="13">"user-42" + "new-checkout"</text>
+
+            <line x1="180" y1="65" x2="228" y2="65" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+            <rect x="236" y="28" width="212" height="74" rx="12" fill="#153139" stroke="#02EFF0"/>
+            <text x="342" y="58" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">XxHash32(...) % 100</text>
+            <text x="342" y="80" text-anchor="middle" fill="#FFFFFF" font-size="13">باکت ۰..۹۹ (بدون حالت)</text>
+
+            <line x1="448" y1="65" x2="496" y2="65" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+            <rect x="504" y="18" width="182" height="42" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+            <text x="595" y="44" text-anchor="middle" fill="#81F7F7" font-size="13" font-weight="600">&lt; 20 → پرچم روشن (۲۰٪)</text>
+
+            <rect x="504" y="70" width="182" height="42" rx="10" fill="#0F282F" stroke="#2E464C"/>
+            <text x="595" y="96" text-anchor="middle" fill="#879497" font-size="13">&gt;= 20 → پرچم خاموش (۸۰٪)</text>
+          </svg>
+        </div>
+        <figcaption class="mt-2 text-xs text-storm-300">رول‌اوت قطعی: فرمول <code class="ic">XxHash32(UserId + FlagKey) % 100 &lt; 20</code> همواره کاربر یکسان را بدون نیاز به ذخیره رکوردهای اختصاصی در دیتابیس به باکت یکسانی هدایت می‌کند.</figcaption>
+      </figure>
+
+      <div class="rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی برای مصاحبه سنیور</p>
+        <p class="mt-2 text-white font-medium">تبیین استراتژی‌های ابطال کش، مسئله هجوم به کش (Stampede)، و تفاوت کنترل همزمانی خوش‌بینانه در برابر بدبینانه در EF Core.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 4 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه راه ۴ · پایپ‌لاین فین‌تک با RAG</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">سامانه ممیزی و تطبیق قراردادها و صورت‌حساب‌های مالی</h4>
+          <p class="mt-2 text-storm-200">فریلنسرها یا شرکت‌های نوپا قراردادهای پیمانکاری و صورت‌حساب‌های ماهانه را در قالب متن ساده، مارک‌داون یا متن PDF بارگذاری می‌کنند. سامانه اقلام فاکتور را با سقف‌های قرارداد، قوانین ارزی و محاسبات مالیات بر ارزش افزوده سنجیده و ناهماهنگی‌ها را علامت‌گذاری می‌کند.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته بک‌اند (.NET 10)</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">decimal</code></span>
+            <span class="chip"><code class="ic">MidpointRounding.ToEven</code></span>
+            <span class="chip">Transactional Outbox</span>
+            <span class="chip"><code class="ic">pgvector</code> + LLM Guard</span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white">دقت محاسبات مالی:</strong> استفاده اکید از نوع داده <code class="ic">decimal</code> در C# (هرگز از <code class="ic">double</code> یا <code class="ic">float</code> استفاده نمی‌شود) همراه با <code class="ic">MidpointRounding.ToEven</code> (گرد کردن بانکی) برای محاسبات ارزی و مالیاتی.</li>
+            <li><strong class="text-white">الگوی Transactional Outbox:</strong> ذخیره‌سازی صورت‌حساب و رویداد ممیزی در قالب یک تراکنش واحد و یکپارچه در EF Core (<code class="ic">db.SaveChangesAsync</code>). رکوردهای ممیزی حتی با کرش کردن ورکر پس‌زمینه هرگز گم نمی‌شوند.</li>
+            <li><strong class="text-white">ترکیب گارد قطعی و هوش مصنوعی:</strong> قوانین قطعی C# درستی ریاضیات، تاریخ‌ها و ساختار شماره شبا و شناسه مالیاتی را می‌سنجند. سپس <code class="ic">pgvector</code> و مدل هوش مصنوعی بررسی می‌کنند که آیا شرح خدمات فاکتور با بند «شرح وظایف» قرارداد تطابق دارد یا خیر.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته انگولار ۲۰</p>
+          <p class="text-sm text-storm-200">ابزار هایلایت بندهای قرارداد در کنار جدول تایید اقلام فاکتور با استفاده از Angular Material و سیستم سیگنال‌ها.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی برای مصاحبه سنیور</p>
+        <p class="mt-2 text-white font-medium">علت شکست اعداد ممیز شناور (<code class="ic">double</code>) در نرم‌افزارهای مالی، و چگونگی تضمین سازگاری داده‌ها با تراکنش‌های ACID و الگوی Transactional Outbox.</p>
+      </div>
+    </div>
+
+    <!-- Blueprint 5 -->
+    <div class="reveal rounded-3xl border border-storm-700 bg-storm-900/90 p-6 md:p-8 space-y-6">
+      <div class="flex items-start gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-2xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="activity" class="w-6 h-6"></i></div>
+        <div>
+          <span class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه راه ۵ · پایش‌پذیری و اهداف سطح خدمت (SLO)</span>
+          <h4 class="mt-1 text-2xl font-semibold text-white">سامانه لحظه‌ای پایش سلامت API، تاخیر زمانی و رخدادهای SLO</h4>
+          <p class="mt-2 text-storm-200">اندپوینت‌های HTTP و دیتابیس‌های پستگرس را بر اساس یک زمان‌بندی منظم پایش می‌کند، چارک‌های تاخیر P50/P95/P99 و بودجه خطا (SLO) را محاسبه کرده، ناهنجاری‌ها را تشخیص می‌دهد و به تلگرام هشدار ارسال می‌کند.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته بک‌اند (.NET 10)</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="chip"><code class="ic">PeriodicTimer</code></span>
+            <span class="chip"><code class="ic">percentile_cont(0.95)</code></span>
+            <span class="chip">OpenTelemetry <code class="ic">ActivitySource</code></span>
+            <span class="chip">OpenTelemetry <code class="ic">Meter</code></span>
+          </div>
+          <ul class="space-y-2 text-sm text-storm-200">
+            <li><strong class="text-white"><code class="ic">PeriodicTimer</code> در <code class="ic">BackgroundService</code>:</strong> حلقه ناهمگام مدرن (<code class="ic">while (await timer.WaitForNextTickAsync(stoppingToken))</code>) که دچار انحراف زمانی یا تداخل اجراها نمی‌شود.</li>
+            <li><strong class="text-white">درج دسته‌ای و پارتیشن‌بندی سری‌های زمانی:</strong> تجمیع درون‌حافظه‌ای نتایج پینگ برای ذخیره دسته‌ای در پستگرس و محاسبه تاخیر P95 با توابع تحلیلی پنجره‌ای در SQL (<code class="ic">percentile_cont(0.95)</code>).</li>
+            <li><strong class="text-white">یکپارچگی با OpenTelemetry:</strong> انتشار ردگیری‌های سفارشی <code class="ic">ActivitySource</code> و نمودارهای هیستوگرام <code class="ic">Meter</code> به‌صورت مستقیم از دات‌نت ۱۰.</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">نکات برجسته انگولار ۲۰</p>
+          <p class="text-sm text-storm-200">نشان‌های وضعیت برخط، نمودارهای تاخیر P95 و کارت‌های تایم‌لاین رویدادها.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+        <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی برای مصاحبه سنیور</p>
+        <p class="mt-2 text-white font-medium">چگونگی جلوگیری <code class="ic">PeriodicTimer</code> از گرسنگی نخ‌های تردپول برخلاف تایمر سنتی <code class="ic">System.Timers.Timer</code>، و نحوه سریع نگه داشتن پستگرس هنگام درج میلیون‌ها ردیف لاگ.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dn-09" data-toc="۲.۹ هشت مبحث محوری" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">2.9</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">60-Second Answers · EF Core · Runtime · HTTP</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">برگه تقلب مصاحبه سنیور</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">هشت مبحث بنیادین بک‌اند در دات‌نت که در مصاحبه باید بتوانید هر یک را در <mark class="hl">کمتر از ۶۰ ثانیه</mark> شفاف و دقیق توضیح دهید.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="clock" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">پاسخ مصاحبه ۶۰ ثانیه‌ای مانند یک گزارش وضعیت اضطراری است: ابتدا مکانیزم رانتایم را نام ببرید، دوم دام پروداکشن را برجسته کنید، و سوم راهکار فنی را ارائه دهید.</p>
+    </div>
+  </div>
+
+  <!-- Topic 1 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۱ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱. تفاوت <code class="ic">IQueryable&lt;T&gt;</code> و <code class="ic">IEnumerable&lt;T&gt;</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">اینترفیس <code class="ic">IQueryable&lt;T&gt;</code> یک درخت عبارت (Expression Tree) می‌سازد</strong> (<code class="ic">Expression&lt;Func&lt;T, bool&gt;&gt;</code>) که EF Core آن را به دستورات SQL برای اجرا روی سرور پایگاه داده ترجمه می‌کند.</p>
+        <p><strong class="text-coral-300">اینترفیس <code class="ic">IEnumerable&lt;T&gt;</code> دلیگیت‌ها</strong> (<code class="ic">Func&lt;T, bool&gt;</code>) را درون حافظه C# اجرا می‌کند. تبدیل داده‌ها به <code class="ic">IEnumerable</code> قبل از اعمال فیلتر باعث می‌شود تمام داده‌های جدول از طریق شبکه به داخل RAM دانلود شوند.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 200" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>اینترفیس IQueryable ردیف‌ها را درون پستگرس فیلتر می‌کند، در حالی که IEnumerable ابتدا کل جدول را به حافظه RAM سی‌شارپ می‌آورد</title>
+          <!-- Top lane: IQueryable<T> -->
+          <rect x="14" y="18" width="210" height="72" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="119" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">IQueryable&lt;T&gt; در پستگرس</text>
+          <text x="119" y="70" text-anchor="middle" fill="#FFFFFF" font-size="13">فیلتر WHERE: ۱۰۰ هزار → ۵ ردیف</text>
+
+          <line x1="224" y1="54" x2="472" y2="54" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="348" y="44" text-anchor="middle" fill="#81F7F7" font-size="13">تنها ۵ ردیف منطبق منتقل می‌شوند</text>
+
+          <rect x="480" y="18" width="226" height="72" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="593" y="48" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">حافظه اپلیکیشن C#</text>
+          <text x="593" y="70" text-anchor="middle" fill="#81F7F7" font-size="13">ردپای ناچیز در حافظه RAM</text>
+
+          <!-- Bottom lane: IEnumerable<T> -->
+          <rect x="14" y="112" width="210" height="72" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="119" y="142" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">IEnumerable&lt;T&gt; پیش از فیلتر</text>
+          <text x="119" y="164" text-anchor="middle" fill="#FFFFFF" font-size="13">دستور SELECT * تمام ۱۰۰ هزار ردیف</text>
+
+          <line x1="224" y1="148" x2="472" y2="148" stroke="#FF7A6B" stroke-width="5" marker-end="url(#arw-coral)"/>
+          <text x="348" y="138" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">انتقال کل جدول از روی شبکه</text>
+
+          <rect x="480" y="112" width="226" height="72" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="593" y="142" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">فیلتر شدن در RAM سی‌شارپ</text>
+          <text x="593" y="164" text-anchor="middle" fill="#FF7A6B" font-size="13">Func&lt;T, bool&gt; حافظه را هدر می‌دهد</text>
+        </svg>
+      </div>
+      <figcaption class="mt-2 text-xs text-storm-300">همواره فیلترها را روی <code class="ic">IQueryable&lt;T&gt;</code> اعمال کنید تا فیلتر کردن ردیف‌ها قبل از ارسال بایت‌ها در شبکه، درون پستگرس انجام شود.</figcaption>
+    </figure>
+  </article>
+
+  <!-- Topic 2 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۲ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۲. سازوکار زیرین <code class="ic">async</code> / <code class="ic">await</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">دستور <code class="ic">async</code> ترد جدیدی ایجاد نمی‌کند.</strong> کامپایلر C# متد شما را به یک ماشین وضعیت (<code class="ic">IAsyncStateMachine</code>) بازنویسی می‌کند.</p>
+        <p>در زمان انتظار برای عملیات I/O شبکه یا دیسک (نظیر پاسخ پستگرس یا OpenRouter)، ترد جاری به تردپول دات‌نت بازمی‌گردد تا به سایر درخواست‌های HTTP سرویس دهد. همواره نوع خروجی متدها را <code class="ic">Task</code> یا <code class="ic">Task&lt;T&gt;</code> تعریف کنید.</p>
+      </div>
+    </div>
+
+    <ol class="relative border-r-2 border-storm-600 mr-3 space-y-4">
+      <li class="step mr-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+        <p class="font-semibold text-white">آغاز I/O و رسیدن به <code class="ic">await</code></p>
+        <p class="text-sm text-storm-300">ماشین وضعیت <code class="ic">IAsyncStateMachine</code> متغیرهای محلی جاری را ثبت کرده و یک ادامه (Continuation) رزرو می‌کند.</p>
+      </li>
+      <li class="step mr-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+        <p class="font-semibold text-white">بازگشت ترد به استخر تردهای دات‌نت (Thread Pool)</p>
+        <p class="text-sm text-storm-300">صفر ترد حین پردازش درخواست در پستگرس یا OpenRouter مسدود می‌ماند.</p>
+      </li>
+      <li class="step mr-6 rounded-xl border border-transparent p-2 -my-2">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+        <p class="font-semibold text-white">اتمام I/O ← ادامه کار ماشین وضعیت</p>
+        <p class="text-sm text-storm-300">یکی از تردهای استخر، وضعیت بعدی را برداشته و شیء بازگشتی <code class="ic">Task&lt;T&gt;</code> را تکمیل می‌کند.</p>
+      </li>
+    </ol>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام ۱: استفاده از <code class="ic">.Result</code> یا <code class="ic">.Wait()</code></p>
+        <p class="mt-2 text-white font-semibold">گرسنگی تردپول (Thread-pool Starvation) و بن‌بست (Deadlock)</p>
+        <p class="mt-1 text-sm text-storm-200">مسدود کردن همگام یک ترد در انتظار پایان تسک ناهمگام، سبب قفل همگام روی ناهمگام (Sync-over-async) شده و استخر تردها را فلج می‌کند.</p>
+      </div>
+      <div class="rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+        <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام ۲: استفاده از <code class="ic">async void</code></p>
+        <p class="mt-2 text-white font-semibold">کرش کردن کل پروسه با پرتاب استثنا</p>
+        <p class="mt-1 text-sm text-storm-200">کدهای فراخواننده نمی‌توانند روی <code class="ic">async void</code> از دستور await استفاده کنند یا خطاهای آن را مهار نمایند. همیشه <code class="ic">Task</code> یا <code class="ic">Task&lt;T&gt;</code> بازگردانید.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- Topic 3 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۳ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۳. مقایسه <code class="ic">ValueTask&lt;T&gt;</code> در برابر <code class="ic">Task&lt;T&gt;</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">کلاس <code class="ic">Task&lt;T&gt;</code> یک نوع مرجع (Reference type) است</strong> که روی هیپ حافظه تخصیص می‌یابد مگر اینکه کش شده باشد. <strong class="text-vivid-300">در حالی که <code class="ic">ValueTask&lt;T&gt;</code> یک <code class="ic">struct</code> (نوع مقداری) است.</strong></p>
+        <p>از <code class="ic">ValueTask&lt;T&gt;</code> در مسیرهای پرحرارت و پرفراخوانی (Hot Paths) که نتیجه معمولاً به صورت همگام در دسترس است (مثلاً در ۹۹٪ موارد از کش درون حافظه خوانده می‌شود) استفاده کنید. هرگز روی یک <code class="ic">ValueTask&lt;T&gt;</code> بیش از یک‌بار await نزنید.</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-right">
+          <tr>
+            <th class="p-4 font-medium text-storm-300 w-1/4">ویژگی</th>
+            <th class="p-4 font-semibold text-white"><code class="ic">Task&lt;T&gt;</code></th>
+            <th class="p-4 font-semibold text-vivid-300"><code class="ic">ValueTask&lt;T&gt;</code></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 text-storm-300">نوع در C#</td>
+            <td class="p-4 text-storm-100">نوع مرجع (<code class="ic">class</code>)</td>
+            <td class="p-4 text-vivid-300">نوع مقداری (<code class="ic">struct</code>)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">هزینه تکمیل همگام</td>
+            <td class="p-4 text-coral-300">تخصیص روی هیپ (مگر کش‌شده)</td>
+            <td class="p-4 text-vivid-300">تخصیص صفر روی هیپ</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">زمان کاربرد</td>
+            <td class="p-4 text-storm-100">انتخاب پیش‌فرض برای متدهای معمول I/O ناهمگام</td>
+            <td class="p-4 text-storm-100">مسیرهای پرحرارت با نرخ اصابت ~۹۹٪ به کش حافظه</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-300">قانون مصرف</td>
+            <td class="p-4 text-storm-100">امکان await چندباره وجود دارد</td>
+            <td class="p-4 text-coral-300">بیش از یک‌بار <code class="ic">await</code> نشود</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <!-- Topic 4 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۴ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۴. جمع‌آوری زباله (GC) و نسل‌های حافظه در دات‌نت</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">دات‌نت هیپ مدیریت‌شده را به Gen 0، Gen 1، Gen 2 و هیپ اشیای بزرگ (LOH) تقسیم می‌کند.</strong> نسل ۰ اشیای کوتاه‌عمر مانند DTOهای درخواست‌های HTTP را نگه می‌دارد، نسل ۱ به عنوان بافر عمل می‌کند، و نسل ۲ اشیای با طول‌عمر طولانی مانند Singletonها را در خود جای می‌دهد. بخش LOH اشیای با حجم <code class="ic">&gt;= 85,000</code> بایت مثل آرایه‌های بسیار بزرگ یا رشته‌های حجیم را ذخیره می‌کند.</p>
+        <p>عملیات GC روی نسل ۰ زیر یک میلی‌ثانیه طول می‌کشد، در حالی که پاکسازی LOH و نسل ۲ بسیار سنگین و پرهزینه است. از تخصیص مکرر رشته‌ها و آرایه‌های بزرگ درون حلقه‌ها خودداری کنید و به جای آن از <code class="ic">ArrayPool&lt;T&gt;</code>، <code class="ic">Span&lt;T&gt;</code> یا استریمینگ بهره ببرید.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-2 text-center">
+      <div class="w-[48%] rounded-xl bg-vivid-400 text-storm-900 py-3 px-4 font-semibold">Gen 0 · اشیای موقت DTO در HTTP · پاکسازی زیر میلی‌ثانیه</div>
+      <div class="w-[64%] rounded-xl bg-vivid-400/70 text-storm-900 py-3 px-4 font-semibold">Gen 1 · بافر واسط میان Gen 0 و Gen 2</div>
+      <div class="w-[82%] rounded-xl bg-storm-700 text-white py-3 px-4 font-semibold">Gen 2 · اشیای پایدار Singleton · پاکسازی پرهزینه و سنگین</div>
+      <div class="w-full rounded-xl border border-coral-400/60 bg-coral-500/15 text-coral-200 py-3 px-4 font-semibold">Large Object Heap (LOH) · اشیای بزرگتر از ۸۵,۰۰۰ بایت · پاکسازی بسیار پرهزینه</div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-xs uppercase tracking-[.2em] text-vivid-300 font-semibold mr-2">ابزارهای حذف فشار از LOH:</span>
+      <span class="chip"><code class="ic">ArrayPool&lt;T&gt;</code></span>
+      <span class="chip"><code class="ic">Span&lt;T&gt;</code></span>
+      <span class="chip">استریمینگ I/O</span>
+    </div>
+  </article>
+
+  <!-- Topic 5 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۵ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۵. کوئری‌های رهگیری‌شده در برابر <code class="ic">AsNoTracking()</code> در EF Core</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">کوئری‌های پیش‌فرض، موجودیت‌ها را به <code class="ic">ChangeTracker</code> متصل می‌کنند</strong> تا متد <code class="ic">SaveChangesAsync()</code> بداند چه ستون‌هایی ویرایش شده‌اند.</p>
+        <p>برای اندپوینت‌های <code class="ic">GET</code> که صرفاً داده‌ها را به JSON تبدیل می‌کنند، همیشه متد <code class="ic">.AsNoTracking()</code> را اضافه کنید تا از تخصیص تصویر اولیه (Snapshot) در حافظه صرف‌نظر شود.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-2xl border border-coral-400/40 bg-storm-900 p-5">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> کوئری رهگیری‌شده پیش‌فرض در متدهای <code class="ic">GET</code></p>
+        <p class="mt-2 text-sm text-storm-200">تک‌تک انتیتی‌ها را به <code class="ic">ChangeTracker</code> متصل کرده و از مقادیر اولیه در حافظه اسنپ‌شات می‌گیرد.</p>
+        <p class="mt-2 text-xs font-mono text-coral-300">← تنها پیش از فراخوانی ()SaveChangesAsync مورد نیاز است</p>
+      </div>
+      <div class="rounded-2xl border border-vivid-400/50 bg-storm-900 p-5">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> استفاده از <code class="ic">.AsNoTracking()</code> در متدهای <code class="ic">GET</code></p>
+        <p class="mt-2 text-sm text-storm-200">تخصیص اسنپ‌شات در <code class="ic">ChangeTracker</code> را نادیده گرفته و ردیف‌ها را مستقیماً به سریال‌سازی JSON هدایت می‌کند.</p>
+        <p class="mt-2 text-xs font-mono text-vivid-300">← مصرف حافظه کمتر و سرعت بالاتر در اندپوینت‌های خواندنی</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- Topic 6 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۶ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۶. معضل کوئری‌های اضافی (مسئله N+1)</h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">چه اتفاقی می‌افتد:</strong> شما تعداد ۵۰ رکورد <code class="ic">Applications</code> را با ۱ کوئری لود می‌کنید و سپس در یک حلقه، اطلاعات <code class="ic">Analysis</code> هر درخواست را به طور جداگانه واکشی می‌نمایید. آن حلقه ۱ کوئری اولیه را به ۱ + ۵۰ = ۵۱ رفت و برگشت به پایگاه داده تبدیل می‌کند.</p>
+        <p><strong class="text-vivid-300">راهکار حل مسئله:</strong> ردیف‌های مرتبط را در یک کوئری با دستور <code class="ic">WHERE application_id = ANY(...)</code> تجمیع و دسته‌ای دریافت کنید (<code class="ic">pageIds.Contains(a.ApplicationId)</code> در <code class="ic">ApplicationService.cs</code>، خطوط ۷۵ تا ۸۳). همچنین می‌توانید از <code class="ic">.Include(...)</code> یا پروجکشن با <code class="ic">.Select(...)</code> استفاده نمایید.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
+      <figcaption class="text-sm font-semibold text-white">رفت و برگشت‌ها به دیتابیس برای بارگذاری ۵۰ درخواست به همراه تحلیل آن‌ها</figcaption>
+      <div data-chart class="mt-4 space-y-4">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">حلقه N+1 (مجموع ۱ + ۵۰)</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="51"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-left">۵۱ رفت و برگشت</span>
+        </div>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_1fr_5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">کوئری تجمیع‌شده (دسته‌ای)</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-left">۲ رفت و برگشت</span>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-storm-400">تجمیع کوئری با <code class="ic">pageIds.Contains(a.ApplicationId)</code> (معادل <code class="ic">WHERE application_id = ANY(...)</code>)، <code class="ic">.Include(...)</code>، یا پروجکشن <code class="ic">.Select(...)</code> از ۵۰ رفت و برگشت اضافی به دیتابیس جلوگیری می‌کند.</p>
+    </figure>
+  </article>
+
+  <!-- Topic 7 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۷ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۷. ترتیب استقرار میان‌افزارها (Middleware) در <code class="ic">Program.cs</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">میان‌افزارها مانند عروسک ماتریوشکا به صورت تودرتو اجرا می‌شوند (ورود اول، خروج آخر).</strong></p>
+        <p><code class="ic">UseExceptionHandler()</code> باید در بالاترین نقطه قرار گیرد تا خطاهای رخ‌داده در تمام لایه‌های زیرین را به دام بیندازد: شامل <code class="ic">UseCors()</code>، <code class="ic">UseAuthentication()</code>، <code class="ic">UseAuthorization()</code>، و اندپوینت‌های شما.</p>
+      </div>
+    </div>
+
+    <figure class="rounded-2xl border border-storm-700 bg-storm-950 p-4">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 260" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>ترتیب تودرتوی میان‌افزارها مانند عروسک ماتریوشکا با UseExceptionHandler در بیرونی‌ترین لایه، سپس UseCors، احراز هویت، اعتبارسنجی سطح دسترسی و در داخلی‌ترین بخش اندپوینت‌ها</title>
+          <rect x="16" y="14" width="688" height="232" rx="22" fill="#0F282F" stroke="#02EFF0" stroke-width="2"/>
+          <text x="360" y="38" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">۱. ()UseExceptionHandler · بیرونی‌ترین لایه (ورود اول، خروج آخر)</text>
+
+          <rect x="56" y="50" width="608" height="180" rx="18" fill="#153139" stroke="#2E464C"/>
+          <text x="360" y="74" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۲. ()UseCors</text>
+
+          <rect x="96" y="86" width="528" height="128" rx="14" fill="#0F282F" stroke="#2E464C"/>
+          <text x="360" y="110" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۳. ()UseAuthentication</text>
+
+          <rect x="140" y="122" width="440" height="76" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="360" y="144" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۴. ()UseAuthorization</text>
+
+          <rect x="200" y="154" width="320" height="34" rx="8" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="360" y="176" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="700">۵. اندپوینت‌های Minimal API</text>
+        </svg>
+      </div>
+      <figcaption class="mt-2 text-xs text-storm-300">از آنجا که <code class="ic">UseExceptionHandler()</code> تمامی لایه‌های درونی را دربرمی‌گیرد، هر خطای مدیریت‌نشده‌ای برای تبدیل به پاسخ استاندارد به سمت آن بالا می‌آید.</figcaption>
+    </figure>
+  </article>
+
+  <!-- Topic 8 -->
+  <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8 space-y-6">
+    <div>
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · ۸ از ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۸. استاندارد RFC 7807 برای خطاهای <code class="ic">ProblemDetails</code></h4>
+      <div class="mt-4 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">استانداردسازی پاسخ تمام خطاها.</strong> به جای اختراع قالب‌های سفارشی <code class="ic">{ error: true, msg: "..." }</code> به ازای هر اندپوینت، APIهای در سطح سنیور متد <code class="ic">builder.Services.AddProblemDetails()</code> را رجیستر کرده و خروجی <code class="ic">Results.Problem(...)</code> را بازمی‌گردانند.</p>
+        <p>سپس رهگیرهای فرانت‌اند مانند <code class="ic">HttpInterceptorFn</code> در انگولار در سراسر برنامه به یک ساختار جیسون کاملاً استاندارد و قابل‌پیش‌بینی تحت قرارداد RFC 7807 تکیه می‌کنند.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="Sample 409 response (RFC 7807)" data-lang="json" data-hl="2-6"><code>{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Concurrency conflict",
+  "status": 409,
+  "detail": "The record was modified by another user.",
+  "instance": "/api/applications/42"
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">متدهای <code class="ic">AddProblemDetails()</code> و <code class="ic">Results.Problem(...)</code> پنج فیلد استاندارد RFC 7807 را تولید می‌کنند: <code class="ic">type</code>، <code class="ic">title</code>، <code class="ic">status</code>، <code class="ic">detail</code>، و <code class="ic">instance</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">رهگیر <code class="ic">HttpInterceptorFn</code> انگولار یک ساختار خطای واحد را در تمام مسیرها پارس می‌کند و نیازی به حدس زدن فیلدهای دلخواه نخواهد داشت.</span></li>
+      </ul>
+    </div>
+  </article>
+</section>

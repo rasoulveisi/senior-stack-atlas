@@ -1,6 +1,6 @@
 /** Tailwind 3.4.16. Run `npm run build` after changing any part in src/parts. */
 module.exports = {
-  content: ['./index.html'],
+  content: ['./index.html', './fa.html', './src/**/*.html'],
   theme: {
     extend: {
       colors: {
@@ -9,7 +9,8 @@ module.exports = {
         coral: { 200:'#FFC2BA', 300:'#FF9A8F', 400:'#FF7A6B', 500:'#FF5C4D' }
       },
       fontFamily: {
-        sans: ['Lexend', 'system-ui', 'sans-serif'],
+        sans: ['Lexend', 'Vazirmatn', 'system-ui', 'sans-serif'],
+        fa: ['Vazirmatn', 'Lexend', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
       }
     }

@@ -1,0 +1,46 @@
+<div class="relative overflow-hidden brand-glow border-y border-storm-700 mt-10">
+  <div class="absolute inset-0 grid-dots opacity-60" aria-hidden="true"></div>
+  <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-16 md:py-24">
+    <div class="grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
+      <div class="reveal">
+        <p class="font-mono text-sm text-vivid-300 tracking-[.2em]">فصل ۰۲ · JOB CRAFT</p>
+        <h2 class="mt-4 text-4xl md:text-6xl font-semibold text-white leading-[1.08] tracking-tight">دات‌نت ۱۰<br><span class="text-vivid-200">بدون کیک چندلایه‌ای</span></h2>
+        <p class="mt-5 text-lg text-storm-100 max-w-lg font-light">مصاحبه‌کنندگان به دنبال بازگو کردن تعاریف تکراری کتاب‌ها درباره Clean Architecture نیستند. آن‌ها می‌خواهند بشنوند <mark class="hl">چرا</mark> این تصمیم معماری را گرفتید.</p>
+        <div class="mt-6 flex flex-wrap gap-2"><span class="chip">.NET 10</span><span class="chip">Minimal APIs</span><span class="chip">EF Core</span><span class="chip">Neon PostgreSQL</span><span class="chip">pgvector</span><span class="chip">Channel&lt;T&gt;</span><span class="chip">Angular 20</span></div>
+      </div>
+      <figure class="reveal">
+        <svg viewBox="0 0 460 300" class="w-full h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>لایه‌های افقی سنتی که با یک برش عمودی ویژگی شکسته می‌شوند</title>
+          <g font-size="12" fill="#879497">
+            <rect x="20" y="30" width="420" height="40" rx="10" fill="#153139" stroke="#2E464C"/><text x="40" y="55">Api</text>
+            <rect x="20" y="78" width="420" height="40" rx="10" fill="#153139" stroke="#2E464C"/><text x="40" y="103">Application</text>
+            <rect x="20" y="126" width="420" height="40" rx="10" fill="#153139" stroke="#2E464C"/><text x="40" y="151">Domain</text>
+            <rect x="20" y="174" width="420" height="40" rx="10" fill="#153139" stroke="#2E464C"/><text x="40" y="199">Infrastructure</text>
+            <rect x="20" y="222" width="420" height="40" rx="10" fill="#153139" stroke="#2E464C"/><text x="40" y="247">Contracts · Shared</text>
+          </g>
+          <rect x="270" y="18" width="110" height="256" rx="18" fill="url(#g-brand)" stroke="#02EFF0" stroke-width="2" filter="url(#glow)" opacity=".95"/>
+          <g text-anchor="middle" font-size="12" font-weight="600" fill="#FFFFFF">
+            <text x="325" y="56">Endpoints.cs</text>
+            <text x="325" y="104">Models.cs</text>
+            <text x="325" y="152">Service.cs</text>
+            <text x="325" y="200">Domain/</text>
+            <text x="325" y="248">AppDbContext</text>
+          </g>
+          <text x="325" y="292" text-anchor="middle" fill="#81F7F7" font-size="12">هر فیچر = یک پوشه مستقل</text>
+        </svg>
+      </figure>
+    </div>
+
+    <div class="reveal mt-12">
+      <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">پرسش‌هایی که این بخش پاسخ می‌دهد</p>
+      <div class="mt-4 grid sm:grid-cols-2 gap-3">
+        <a href="#dn-01" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.1</span><span class="text-sm text-storm-100">چرا معماری برش‌های عمودی و خداحافظی با Repository عمومی، AutoMapper و MediatR؟</span></a>
+        <a href="#dn-03" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.3</span><span class="text-sm text-storm-100">چه فاجعه‌ای رخ می‌دهد اگر یک سرویس Scoped درون یک کلاس Singleton تزریق شود؟</span></a>
+        <a href="#dn-04" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.4</span><span class="text-sm text-storm-100">وقتی تاخیر رفت و برگشت شبکه به دیتابیس ۴۰ تا ۵۰ میلی‌ثانیه است، کد شما چگونه رفتار می‌کند؟</span></a>
+        <a href="#dn-05" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.5</span><span class="text-sm text-storm-100">وقتی یک پردازش پس‌زمینه (Background Job) کرش می‌کند، چه بر سر سیستم می‌آید؟</span></a>
+        <a href="#dn-06" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.6</span><span class="text-sm text-storm-100">چگونه به هوش مصنوعی و وب‌سرویس‌های خارجی متصل می‌شوید بدون تخلیه سوکت‌ها؟</span></a>
+        <a href="#dn-07" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">2.7</span><span class="text-sm text-storm-100">چگونه کل سیستم را به صورت واقعی و بدون ماک کردن تمام اجزا تست می‌کنید؟</span></a>
+      </div>
+    </div>
+  </div>
+</div>

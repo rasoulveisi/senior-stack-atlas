@@ -1,0 +1,1214 @@
+<section id="ex-07" data-toc="۱.۷ پولینگ و هایپردرایو" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.7</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">استخر اتصالات · Cloudflare Hyperdrive · تراکنش‌ها</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">مهندسی پایگاه داده در لبه شبکه</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">ورکرهای لبه شبکه (Edge) در قالب صدها نمونه فعال می‌شوند. بدون <mark class="hl">استخر اتصال در حالت تراکنش (Transaction-Mode Pooling)</mark>، یک جهش ناگهانی ترافیک تمامی اتصالات PostgreSQL را ظرف چند ثانیه به نابودی می‌کشاند.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="car" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">سرویس Cloudflare Hyperdrive شبیه ایستگاه تاکسی مشترک در مقابل یک هتل شلوغ است. به جای اینکه ۵۰۰ مسافر هر کدام برای یک سفر کوتاه خودرویی مجزا بخرند، مسافران سوار تاکسی‌های گرم و آماده می‌شوند و بلافاصله پس از پایان سفر، آن را برمی‌گردانند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">دام PostgreSQL در معماری بدون سرور (Serverless)</h4>
+    <p class="text-storm-200 max-w-3xl">اپلیکیشن‌های سنتی Node.js روی ۲ یا ۳ سرور پایدار و بلندمدت با ۲۰ اتصال در استخر TCP اجرا می‌شوند (<code class="ic">2 * 20 = 40</code>). اما در یک ران‌تایم سرورلس لبه شبکه مانند Cloudflare Workers، یک موج ترافیکی می‌تواند ۵۰۰ نمونه ورکر ایزوله را در سراسر دنیا هم‌زمان فعال سازد.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 270" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>دو سرور سنتی ۴۰ اتصال را در استخر نگه می‌دارند، در حالی که ۵۰۰ ورکر لبه با باز کردن اتصال‌های هم‌زمان TCP، TLS و احراز هویت باعث سقوط PostgreSQL می‌شوند</title>
+          <rect x="14" y="18" width="340" height="234" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="184" y="46" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">سرورهای پایدار و سنتی (۲ × ۲۰ = ۴۰)</text>
+
+          <rect x="34" y="68" width="130" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="99" y="92" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">سرور Node شماره ۱</text>
+          <text x="99" y="111" text-anchor="middle" fill="#81F7F7" font-size="13">استخر ۲۰ اتصال TCP</text>
+
+          <rect x="34" y="140" width="130" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="99" y="164" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">سرور Node شماره ۲</text>
+          <text x="99" y="183" text-anchor="middle" fill="#81F7F7" font-size="13">استخر ۲۰ اتصال TCP</text>
+
+          <line x1="164" y1="95" x2="214" y2="122" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+          <line x1="164" y1="167" x2="214" y2="140" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="222" y="92" width="116" height="78" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="280" y="125" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">PostgreSQL</text>
+          <text x="280" y="147" text-anchor="middle" fill="#81F7F7" font-size="13">۴۰ سوکت گرم و آماده</text>
+          <text x="184" y="228" text-anchor="middle" fill="#879497" font-size="13">هندشیک فقط یک‌بار هنگام راه‌اندازی انجام می‌شود</text>
+
+          <rect x="378" y="18" width="368" height="234" rx="16" fill="#153139" stroke="#FF7A6B"/>
+          <text x="562" y="46" text-anchor="middle" fill="#FF7A6B" font-size="15" font-weight="600">۵۰۰ ورکر لبه بدون استخر اتصال (Pooler)</text>
+
+          <rect x="396" y="64" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="87" text-anchor="middle" fill="#FFFFFF" font-size="13">ورکر شماره ۱ (TCP+TLS)</text>
+
+          <rect x="396" y="110" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="133" text-anchor="middle" fill="#FFFFFF" font-size="13">ورکر شماره ۲ (TCP+TLS)</text>
+
+          <rect x="396" y="156" width="138" height="36" rx="8" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="465" y="179" text-anchor="middle" fill="#FFFFFF" font-size="12">ورکر شماره ۵۰۰ (TCP+TLS)</text>
+
+          <line x1="534" y1="82" x2="582" y2="112" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="534" y1="128" x2="582" y2="128" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="534" y1="174" x2="582" y2="144" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+
+          <rect x="590" y="84" width="140" height="88" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="660" y="116" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="700">سقوط PostgreSQL</text>
+          <text x="660" y="137" text-anchor="middle" fill="#FFFFFF" font-size="13">FATAL: sorry, too</text>
+          <text x="660" y="155" text-anchor="middle" fill="#FFFFFF" font-size="13">many clients already</text>
+          <text x="562" y="228" text-anchor="middle" fill="#FF7A6B" font-size="13">+۱۵۰ تا ۳۰۰ میلی‌ثانیه تاخیر در هر درخواست</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">هر اتصال تازه نیازمند هندشیک سه‌مرحله‌ای TCP، برقراری امن TLS و احراز هویت در دیتابیس است؛ پیش از آنکه حتی یک کوئری ساده اجرا شود.</figcaption>
+    </figure>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">40</p>
+        <p class="mt-1 text-sm text-storm-300">استخر سنتی (<code class="ic">2 * 20</code>)</p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">500</p>
+        <p class="mt-1 text-sm text-storm-300">ورکر لبه در اوج ترافیک</p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-2xl md:text-3xl font-semibold text-coral-300">+150–300 ms</p>
+        <p class="mt-1 text-sm text-storm-300">تاخیر اتصال سرد در هر درخواست</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">max: 5</p>
+        <p class="mt-1 text-sm text-storm-300">سقف سوکت هر ورکر در <code class="ic">client.ts</code></p>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن · اتصالات بدون استخر در معماری سرورلس</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">FATAL: sorry, too many clients already</code></p>
+      <p class="mt-1 text-sm text-storm-200">برقراری ۵۰۰ اتصال مستقیم TCP، TLS و احراز هویت دیتابیس، بین ۱۵۰ تا ۳۰۰ میلی‌ثانیه تاخیر هندشیک به تک‌تک درخواست‌ها تحمیل می‌کند. در این حالت، سقف پذیرش کلاینت در PostgreSQL فوراً پر شده و سرور با خطای بحرانی متوقف می‌شود.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">راهکار PhysioCoach AI: ترکیب Cloudflare Hyperdrive با Drizzle ORM</h4>
+    <p class="text-storm-200 max-w-3xl">در فایل <code class="ic">src/db/client.ts</code>، ورکرها به جای باز کردن اتصالات خام و مستقیم در سراسر اینترنت عمومی، از طریق Cloudflare Hyperdrive به پایگاه داده Neon PostgreSQL متصل می‌شوند.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">ورکر لبه ← استخر Hyperdrive ← پایگاه داده Neon PostgreSQL</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> اجرای مرحله‌ای</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">ورکرهای لبه شبکه (Edge)</p>
+          <p class="text-xs text-storm-300">۵۰۰ نمونه مجزا و ایزوله</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white">Cloudflare Hyperdrive</p>
+          <p class="text-xs text-storm-300">استخر اتصال در حالت تراکنش</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">Neon PostgreSQL</p>
+          <p class="text-xs text-storm-300">اتصالات گرم و پایدار بک‌اند</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/db/client.ts" data-lang="ts" data-hl="5-6"><code>const client = postgres(connectionString, {
+  max: 5,
+  idle_timeout: 10,
+  connect_timeout: 10,
+  prepare: false,     // &lt;-- CRITICAL for transaction-mode connection poolers!
+  fetch_types: false, // &lt;-- Saves an extra startup round-trip query on cold start!
+});
+
+return drizzle(client, { schema });</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">prepare: false</code> عبارت‌های از پیش کامپایل‌شده نام‌دار (Named Prepared Statements) را غیرفعال می‌کند تا استخر در حالت تراکنش با تغییر اتصالات بک‌اند دچار شکست نشود.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">fetch_types: false</code> از اجرای کوئری خودکار بررسی انواع در جدول <code class="ic">pg_type</code> صرف‌نظر می‌کند و رفت‌وبرگشت‌های شبکه در اتصال اولیه (Cold Start) را به نصف کاهش می‌دهد.</span></li>
+      </ul>
+    </div>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">چرا در فایل <code class="ic">src/db/client.ts</code> دو گزینه <code class="ic">prepare: false</code> و <code class="ic">fetch_types: false</code> تنظیم شده‌اند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">۱. <code class="ic">prepare: false</code> (غیرفعال‌سازی عبارات آماده نام‌دار):</strong> مدیریت‌کننده‌های استخر اتصال مانند Cloudflare Hyperdrive و PgBouncer در <strong>حالت استخر تراکنش (Transaction Pooling Mode)</strong> کار می‌کنند. ممکن است تراکنش شماره ۱ روی اتصال بک‌اند پستگرس <code class="ic">#42</code> اجرا شود، در حالی که تراکنش شماره ۲ روی اتصال بک‌اند <code class="ic">#19</code> قرار گیرد. عبارات آماده نام‌دار در پستگرس به یک <em>اتصال فیزیکی خاص TCP</em> وابسته هستند. فرض کنید کتابخانه <code class="ic">postgres.js</code> دستور آماده <code class="ic">s1</code> را روی اتصال <code class="ic">#42</code> ایجاد کند و در ادامه کوئری بعدی را روی اتصال <code class="ic">#19</code> بفرستد. در این لحظه پستگرس با خطای <code class="ic">ERROR: prepared statement "s1" does not exist</code> متوقف می‌شود. قرار دادن <code class="ic">prepare: false</code> اجرای ساده/بدون‌نام پروتکل را فعال می‌کند تا مدیریت استخر در سطح تراکنش بدون مشکل عمل کند.</p>
+        <p><strong class="text-vivid-300">۲. <code class="ic">fetch_types: false</code> (درون‌نگری در زمان اتصال سرد):</strong> درایور <code class="ic">postgres.js</code> به طور پیش‌فرض هنگام اتصال، کوئری <code class="ic">SELECT oid, typname FROM pg_type...</code> را اجرا می‌کند تا انواع داده‌های سفارشی پستگرس را پیش از اجرای نخستین کوئری شما شناسایی کند. در محیط سرورلس Worker، این کوئری اضافی تعداد رفت‌وبرگشت‌ها به دیتابیس را در نخستین اتصال دو برابر می‌کند. خاموش کردن <code class="ic">fetch_types</code> تاخیر اتصال سرد دیتابیس را به نصف می‌رساند.</p>
+      </div>
+
+      <div class="mt-6 space-y-5 pt-5 border-t border-storm-700">
+        <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-4">
+          <div class="overflow-x-auto">
+            <svg viewBox="0 0 740 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+              <title>تراکنش ۱ دستور آماده s1 را روی بک‌اند ۴۲ می‌سازد، سپس تراکنش ۲ روی بک‌اند ۱۹ قرار می‌گیرد و به دلیل عدم وجود s1 در آن با شکست مواجه می‌شود</title>
+              <rect x="14" y="56" width="160" height="108" rx="14" fill="#153139" stroke="#2E464C"/>
+              <text x="94" y="96" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">استخر Hyperdrive</text>
+              <text x="94" y="118" text-anchor="middle" fill="#81F7F7" font-size="13">حالت تراکنش</text>
+              <text x="94" y="140" text-anchor="middle" fill="#879497" font-size="13">تخصیص مجدد در هر تراکنش</text>
+
+              <line x1="174" y1="84" x2="246" y2="58" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+              <line x1="174" y1="136" x2="246" y2="162" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+              <rect x="254" y="20" width="210" height="76" rx="12" fill="#153139" stroke="#02EFF0"/>
+              <text x="359" y="48" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">تراکنش ۱ ← بک‌اند پستگرس #42</text>
+              <text x="359" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13">PREPARE s1 (ذخیره‌شده روی #42)</text>
+
+              <rect x="254" y="124" width="210" height="76" rx="12" fill="#153139" stroke="#FF7A6B"/>
+              <text x="359" y="152" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">تراکنش ۲ ← بک‌اند پستگرس #19</text>
+              <text x="359" y="176" text-anchor="middle" fill="#FFFFFF" font-size="13">EXECUTE s1 (وجود ندارد روی #19!)</text>
+
+              <line x1="464" y1="162" x2="504" y2="162" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+              <rect x="512" y="120" width="214" height="84" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+              <text x="619" y="150" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="700">ERROR: prepared statement</text>
+              <text x="619" y="170" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="700">"s1" does not exist</text>
+              <text x="619" y="190" text-anchor="middle" fill="#81F7F7" font-size="13">راهکار: prepare: false</text>
+            </svg>
+          </div>
+          <figcaption class="mt-2 text-xs text-storm-300">عبارات آماده نام‌دار روی یک اتصال فیزیکی مشخص TCP زندگی می‌کنند. گزینه <code class="ic">prepare: false</code> پروتکل را به اجرای بدون‌نام تغییر می‌دهد تا هر بک‌اندی بتواند هر کوئری را اجرا کند.</figcaption>
+        </figure>
+
+        <figure class="rounded-2xl border border-storm-700 bg-storm-900 p-5">
+          <figcaption class="text-sm font-semibold text-white">رفت‌وبرگشت‌های شبکه در اتصال سرد دیتابیس برای نخستین کوئری</figcaption>
+          <div data-chart class="mt-4 space-y-4">
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+              <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">حالت پیش‌فرض (<code class="ic">pg_type</code> + کوئری)</span>
+              <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="2"></div></div>
+              <span class="font-mono text-sm text-coral-300 text-left">2 round-trips</span>
+            </div>
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[15rem_1fr_8rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+              <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">fetch_types: false</code></span>
+              <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+              <span class="font-mono text-sm text-vivid-300 text-left">1 round-trip</span>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-storm-400">حذف کوئری <code class="ic">SELECT oid, typname FROM pg_type...</code> رفت‌وبرگشت‌های شبکه در اتصال اولیه دیتابیس را به نصف می‌رساند.</p>
+        </figure>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">کوئری‌های مستقیم Drizzle و تراکنش‌های هماهنگ با استخر</h4>
+    <p class="text-storm-200 max-w-3xl">سامانه PhysioCoach AI به جای بسته‌بندی Drizzle ORM در کلاس‌های تودرتوی <code class="ic">UserRepository</code>، <code class="ic">WorkoutPlanRepository</code> و <code class="ic">AbstractBaseRepository</code>، از یک معماری مستقیم و شفاف (Direct &amp; Flat Architecture) بهره می‌برد.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> کلاس‌های واسط و سفارشی Repository</p>
+        <p class="mt-3 text-storm-200">پوشاندن یک SQL Builder که ذاتاً تایپ‌سیف است در لایه‌های <code class="ic">UserRepository</code> و <code class="ic">AbstractBaseRepository</code>.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ مخفی‌سازی Joinهای SQL، ایجاد باگ‌های N+1 و دشواری در انتقال تراکنش</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> کوئری‌های مستقیم Drizzle در مسیرها و سرویس‌ها</p>
+        <p class="mt-3 text-storm-200">فریم‌ورک Drizzle خود یک کوئری‌ساز تایپ‌سیف است. کوئری‌ها شفاف، صریح و به دور از پیچیدگی باقی می‌مانند.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ مشاهده واضح Joinها و ارسال روان شیء تراکنش بین جداول مختلف</p>
+      </div>
+    </div>
+
+    <p class="text-storm-200 max-w-3xl">هنگام ایجاد یک کاربر دارای رمز عبور در <code class="ic">src/routes/auth.ts</code>، باید درج داده در جداول <code class="ic">users</code> و <code class="ic">auth_credentials</code> به صورت اتمیک (همه‌یاهیچ) انجام شود. اگر درج دوم شکست بخورد، هرگز ردیف کاربری رهاشده و بدون رمز عبور در سیستم باقی نمی‌ماند.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/routes/transactions.ts" data-lang="ts" data-hl="2,6-8,16"><code>export async function withTransactionFallback&lt;T&gt;(
+  db: ClientWithTransaction,
+  operation: (client: T) =&gt; Promise&lt;void&gt;,
+  contextLabel: string,
+): Promise&lt;void&gt; {
+  try {
+    await db.transaction(async (tx) =&gt; {
+      await operation(tx as T);
+    });
+    return;
+  } catch (error) {
+    if (!isTransactionBeginFailure(error)) {
+      throw error;
+    }
+    // ... fallback for stateless HTTP drivers that disallow BEGIN
+  }
+  await operation(db as unknown as T);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">db.transaction</code> تابع <code class="ic">operation(tx)</code> را به صورت کاملاً اتمیک روی جداول <code class="ic">users</code> و <code class="ic">auth_credentials</code> اجرا می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">چنانچه درایور فاقد حالت HTTP اجازه اجرای دستور <code class="ic">BEGIN</code> را ندهد، تابع <code class="ic">isTransactionBeginFailure</code> عملیات را با اجرای <code class="ic">operation(db)</code> پشتیبانی می‌کند.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">شیء تراکنش Drizzle (<code class="ic">tx</code>) دقیقاً همان رابط کوئری‌نویسی شیء پایه <code class="ic">db</code> را دارد. هر تابعی که برای دریافت پارامتر عمومی <code class="ic">client: T</code> طراحی شود، هم درون یک تراکنش و هم خارج از آن بدون هیچ تغییری کار می‌کند.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-08" data-toc="۱.۸ ادغام ایمن هوش مصنوعی" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.8</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">هوش مصنوعی تاب‌آور · هیدراتاسیون مقید · ردپای حسابرسی بالینی</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">ادغام ایمن با هوش مصنوعی</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">در یک دامنه درمانی و بالینی، مدل‌های زبانی (LLM) دچار توهم می‌شوند. فراخوانی‌های هوش مصنوعی بیرونی را با <mark class="hl">فهرست‌های از پیش فیلترشده در دیتابیس و دروازه‌های ایمنی قطعی</mark> مهار کنید.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="clipboard-check" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">با مدل زبانی همانند یک کارآموز تازه‌کار در آشپزخانه بیمارستان رفتار کنید. کارآموز تنها مجاز است غذاها را از یک منوی تاییدشده و بی‌خطر انتخاب کند، و یک پزشک ارشد پیش از خروج هر سفارش از آشپزخانه، همه چیز را با دقت بازبینی می‌کند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">خط لوله ۶ مرحله‌ای برای اندپوینت <code class="ic">POST /workout-plans/generate</code></h4>
+    <p class="text-storm-200 max-w-3xl">اگر مدل زبانی رها شود، ممکن است تمرینی من‌درآوردی بسازد یا خروجی JSON نامعتبر تولید کند. از آن بدتر، می‌تواند برای بیماری با فتق دیسک حاد کمری، حرکات سنگین هالتر روی ستون فقرات (<code class="ic">Barbell Good Mornings</code>) تجویز کند! در ادامه نحوه مهار ایمن آن در <code class="ic">src/services/workout-generator.ts</code> و <code class="ic">src/routes/workout-plans.ts</code> آمده است:</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">کلاینت: <code class="ic">POST /workout-plans/generate</code> (<code class="ic">src/services/workout-generator.ts</code>)</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> اجرای مرحله‌ای</button>
+      </div>
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white text-sm">هش ورودی</p>
+          <p class="text-xs text-storm-300">محاسبه SHA-256 مشخصات + آسیب‌ها + اهداف</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02</p>
+          <p class="font-semibold text-white text-sm">فیلتر کاتالوگ</p>
+          <p class="text-xs text-storm-300">حذف اولیه تداخل آسیب‌ها در Postgres</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white text-sm">فراخوانی مدل در OpenRouter</p>
+          <p class="text-xs text-storm-300">فقط انتخاب شناسه‌های امن + تایم‌اوت و مدل‌های رزرو</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white text-sm">دروازه Zod</p>
+          <p class="text-xs text-storm-300"><code class="ic">leanAiWorkoutPlanSchema</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">05</p>
+          <p class="font-semibold text-white text-sm">هیدراته و اعتبارسنجی</p>
+          <p class="text-xs text-storm-300"><code class="ic">validateWorkoutPlan</code> + <code class="ic">runPlanAudit</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">06</p>
+          <p class="font-semibold text-white text-sm">ذخیره و پاسخ</p>
+          <p class="text-xs text-storm-300">ثبت در <code class="ic">ai_audit_logs</code> + بازگرداندن برنامه</p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-3 py-3">
+          <p class="font-mono text-[11px] text-coral-300">هنگام بروز خطا</p>
+          <p class="font-semibold text-white text-sm">409 / 503</p>
+          <p class="text-xs text-storm-300"><code class="ic">traceId</code> + <code class="ic">auditLogId</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">قیف ایمنی بالینی (The Clinical Safety Funnel)</h4>
+    <p class="text-storm-200 max-w-3xl">به جای اینکه به مدل زبانی اجازه دهیم تمرین‌ها را از ابتدا ابداع کند، هر مرحله دایره آنچه را که می‌تواند به دست بیمار برسد تنگ‌تر و ایمن‌تر می‌کند.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 250" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>قیف ایمنی از کاتالوگ کامل تمرینات در پستگرس تا کاندیداهای امن فیلترشده، انتخاب شناسه توسط مدل، اعتبارسنجی Zod، گیت قطعی بالینی و برنامه تمرینی نهایی</title>
+          <rect x="10" y="24" width="112" height="124" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="66" y="72" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">کاتالوگ کامل</text>
+          <text x="66" y="93" text-anchor="middle" fill="#879497" font-size="13">Postgres</text>
+          <text x="66" y="112" text-anchor="middle" fill="#81F7F7" font-size="13">exercise_catalog</text>
+
+          <line x1="122" y1="86" x2="144" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="150" y="34" width="122" height="104" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="211" y="72" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">کاندیداهای ایمن</text>
+          <text x="211" y="93" text-anchor="middle" fill="#FFFFFF" font-size="13">حذف تداخل آسیب‌ها</text>
+          <text x="211" y="112" text-anchor="middle" fill="#879497" font-size="13">پیش از فراخوانی مدل</text>
+
+          <line x1="272" y1="86" x2="294" y2="86" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="300" y="42" width="114" height="88" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="357" y="78" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">انتخاب توسط مدل</text>
+          <text x="357" y="99" text-anchor="middle" fill="#81F7F7" font-size="13">تنها شناسه exerciseId</text>
+
+          <line x1="414" y1="86" x2="436" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="442" y="46" width="96" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="490" y="80" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">دروازه Zod</text>
+          <text x="490" y="100" text-anchor="middle" fill="#81F7F7" font-size="13">اسکیمای JSON</text>
+
+          <line x1="538" y1="86" x2="560" y2="86" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="566" y="46" width="108" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="620" y="78" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">گیت قطعی</text>
+          <text x="620" y="96" text-anchor="middle" fill="#FFFFFF" font-size="13">اعتبارسنجی بالینی</text>
+
+          <line x1="674" y1="86" x2="694" y2="86" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="700" y="50" width="52" height="72" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="726" y="91" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">برنامه</text>
+
+          <line x1="490" y1="126" x2="490" y2="178" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <line x1="620" y1="126" x2="620" y2="178" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="380" y="184" width="340" height="46" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="550" y="212" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">رد درخواست ← لاگ حسابرسی + 409/503 + traceId</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">تابع <code class="ic">loadCatalogCandidatesFromDb</code> تمرینات ناامن را پیش از ساخت پرامپت حذف می‌کند؛ سپس توابع <code class="ic">hydratePlanFromCatalog</code>، <code class="ic">validateWorkoutPlan</code> و <code class="ic">runPlanAudit</code> درستی خروجی را بررسی می‌کنند.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">۴ الگوی معماری که باید در مصاحبه برجسته کنید</h4>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۱. هرگز هوش مصنوعی را از فرانت‌اند صدا نزنید</p>
+        <p class="mt-1 text-sm text-storm-300">تمامی تعاملات با هوش مصنوعی درون بک‌اند Express انجام می‌شود. این رویکرد کلیدهای API را محافظت کرده، از دور زدن قوانین ایمنی از طریق تزریق پرامپت (Prompt Injection) جلوگیری می‌کند و تمام فراخوانی‌ها را در جدول <code class="ic">ai_audit_logs</code> ثبت می‌نماید.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="filter" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۲. هیدراتاسیون مقید کاندیداها (Constrained Hydration)</p>
+        <p class="mt-1 text-sm text-storm-300">تابع <code class="ic">loadCatalogCandidatesFromDb</code> در مسیر <code class="ic">src/services/workout-generator/candidates.ts</code> ابتدا جدول <code class="ic">exercise_catalog</code> را کوئری زده و تعارضات حرکتی با مفاصل آسیب‌دیده را حذف می‌کند. هوش مصنوعی فقط شناسه‌های معتبر <code class="ic">exerciseId</code> را برمی‌گزیند؛ سپس تابع <code class="ic">hydratePlanFromCatalog</code> در <code class="ic">src/services/workout-generator/plan-hydration.ts</code> آن‌ها را به رکوردهای دیتابیس متصل می‌سازد.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="list-checks" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۳. گیت ایمنی قطعی پس از سنتز مدل</p>
+        <p class="mt-1 text-sm text-storm-300">پس از اینکه مدل زبانی برنامه را برگرداند، قوانین قطعی تایپ‌اسکریپت (<code class="ic">validateWorkoutPlan</code> و <code class="ic">runPlanAudit</code>) الگوهای حرکتی، سقف حجم تمرین و منع‌های بالینی را به صورت مستقل اعتبارسنجی می‌کنند.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">۴. بدون فال‌بک‌های ساختگی (شکست امن و شفاف)</p>
+        <p class="mt-1 text-sm text-storm-300">اگر هوش مصنوعی دچار تایم‌اوت شود یا در آزمون‌های ایمنی رد شود، رکوردی را در <code class="ic">ai_audit_logs</code> می‌نویسیم. سپس پاسخ استاندارد <code class="ic">HTTP 409 Conflict</code> (یا <code class="ic">503</code>) را همراه با <code class="ic">traceId</code> و <code class="ic">auditLogId</code> بازمی‌گردانیم.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> برنامه جایگزین و ساختگی از پیش کدنویسی‌شده</p>
+        <p class="mt-3 text-storm-200">مخفی کردن خرابی هوش مصنوعی در بک‌اند با بازگرداندن یک تمرین ماک و پیش‌فرض هنگام بروز خطا یا تایم‌اوت.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ نادیده گرفتن آسیب‌دیدگی زانوی کاربر (از نظر بالینی فوق‌العاده خطرناک)</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شکست امن به همراه قابلیت ردیابی کامل</p>
+        <p class="mt-3 text-storm-200">ثبت دقیق پرامپت، تاخیر مدل و علت خطا در <code class="ic">ai_audit_logs</code>، و سپس بازگرداندن <code class="ic">409 Conflict</code> (یا <code class="ic">503</code>) با <code class="ic">traceId</code> و <code class="ic">auditLogId</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ تضمین صفر تمرین ناامن و امکان بررسی بلادرنگ ریشه مشکل در سیستم</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ex-09" data-toc="۱.۹ مدیریت خطای RFC 7807" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.9</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">میان‌افزار خطا · استاندارد RFC 7807 · مهار هشدارهای لاگ</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">مدیریت متمرکز خطا</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">اکسپرس یک میان‌افزار مدیریت خطا را با بررسی شرط <code class="ic">fn.length === 4</code> در زمان اجرا شناسایی می‌کند. هر شکستی در سیستم باید از مسیر <mark class="hl">یک قرارداد یکپارچه Problem Details بر پایه RFC 7807</mark> به بیرون هدایت شود.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="file-text" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">در یک بیمارستان، تمامی بخش‌ها از یک فرم گزارش حادثه یکسان استفاده می‌کنند. حادثه در پذیرش رخ داده باشد، در آزمایشگاه یا در داروخانه، هر پزشکی می‌تواند ظرف چند ثانیه گزارش را بخواند و متوجه ماجرا شود.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">دام شرط زمان اجرای <code class="ic">fn.length === 4</code></h4>
+    <p class="text-storm-200 max-w-3xl">در اکسپرس، یک میان‌افزار مدیریت خطا صرفاً با داشتن <strong>دقیقاً ۴ آرگومان</strong> شناسایی می‌شود: <code class="ic">(error, req, res, next)</code>.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن · اکسپرس مقدار <code class="ic">fn.length === 4</code> را چک می‌کند</p>
+      <p class="mt-2 text-white font-semibold">حذف <code class="ic">_next</code> مقدار را به <code class="ic">fn.length === 3</code> تغییر داده و هندلر خطای شما بی‌پاسخ نادیده گرفته می‌شود</p>
+      <p class="mt-1 text-sm text-storm-200">حتی اگر داخل تابع مدیریت خطا نیازی به فراخوانی <code class="ic">next</code> نداشته باشید، حتماً باید پارامتر چهارم <code class="ic">_next</code> را در ساختار <code class="ic">(error, req, res, _next)</code> نگه دارید. اگر بنویسید <code class="ic">(error, req, res)</code>، ویژگی <code class="ic">fn.length</code> برابر <code class="ic">3</code> می‌شود و اکسپرس آن را یک میان‌افزار عادی در نظر می‌گیرد و هنگام وقوع خطا اصلاً آن را اجرا نمی‌کند.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> ۳ آرگومان: <code class="ic">(error, req, res)</code></p>
+        <p class="mt-3 text-storm-200">مقدار <code class="ic">fn.length</code> تابع در جاوااسکریپت <code class="ic">3</code> است. اکسپرس آن را به عنوان یک میان‌افزار معمولی ثبت می‌کند.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ هنگام صدا زدن next(err) کاملاً نادیده گرفته شده و اجرا نمی‌شود</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> ۴ آرگومان: <code class="ic">(error, req, res, _next)</code></p>
+        <p class="mt-3 text-storm-200">مقدار <code class="ic">fn.length</code> تابع برابر <code class="ic">4</code> است. عبارت <code class="ic">void _next;</code> لینتر را راضی نگه داشته و پارامتر چهارم را حفظ می‌کند.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ تمامی خطاهای پرتاب‌شده در کل برنامه را با موفقیت دریافت و مدیریت می‌کند</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">استاندارد RFC 7807 / RFC 9457 (<code class="ic">application/problem+json</code>)</h4>
+    <p class="text-storm-200 max-w-3xl">در فایل <code class="ic">src/middleware/error.ts</code>، سامانه PhysioCoach AI خروجی‌های خطای سلیقه‌ای و نامنظم را با ساختار استاندارد RFC 7807 Problem Details برای APIهای HTTP جایگزین می‌کند.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> ساختارهای ناسازگار و متناقض خطا در مسیرها</p>
+        <p class="mt-3 text-storm-200">یک اندپوینت شیء <code class="ic">{ error: "bad" }</code> بازمی‌گرداند در حالی که دیگری <code class="ic">{ msg: "failed", code: 12 }</code> می‌دهد.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ فرانت‌اند ناچار است برای هر اندپوینت لاجیک مجزایی برای خواندن خطا پیاده‌سازی کند</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> یک قرارداد یکتا بر پایه RFC 7807</p>
+        <p class="mt-3 text-storm-200">هر خطایی هدر <code class="ic">Content-Type: application/problem+json</code> را به همراه فیلدهای <code class="ic">type</code>، <code class="ic">title</code>، <code class="ic">detail</code>، <code class="ic">instance</code>، <code class="ic">traceId</code> و <code class="ic">auditLogId</code> برمی‌گرداند.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ یک ساختار کاملاً پیش‌بینی‌پذیر برای کلاینت‌ها و سیستم‌های لاگینگ</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/middleware/error.ts" data-lang="ts" data-hl="1-2,9-11,15-24"><code>export const errorHandler: ErrorRequestHandler = (error: unknown, req, res, _next) =&gt; {
+  void _next;
+  const candidate: HttpError =
+    error instanceof Error ? error : new Error('Unexpected API error.');
+  const status = resolveStatusCode(error, candidate);
+  const traceId = req.traceId || crypto.randomUUID();
+  const auditLogId = candidate.auditLogId || req.auditLogId || null;
+
+  if (status &gt;= 500) {
+    console.error('request.failed', { traceId, auditLogId, error: candidate.message });
+  }
+
+  res
+    .status(status)
+    .type('application/problem+json')
+    .json({
+      type: `https://physiocoach.devbench.ir/problems/${status}`,
+      title: STATUS_TITLES[status] || 'Request Failed',
+      detail: candidate.message || 'Unexpected API error.',
+      instance: req.originalUrl,
+      traceId,
+      auditLogId,
+      ...(error instanceof ZodError ? { errors: error.issues } : {}),
+    });
+};</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">تعریف <code class="ic">(error: unknown, req, res, _next)</code> مقدار <code class="ic">fn.length === 4</code> را حفظ می‌کند تا اکسپرس در صورت بروز خطا آن را فراخوانی کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">شرط <code class="ic">if (status &gt;= 500)</code> فقط کرش‌ها و خطاهای سمت سرور را لاگ می‌کند و اشتباهات موردانتظار کلاینت با کدهای <code class="ic">4xx</code> را ثبت نمی‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200">هدر پاسخ را روی <code class="ic">application/problem+json</code> قرار داده و مقادیر <code class="ic">traceId</code>، <code class="ic">auditLogId</code> و آرایه اختیاری <code class="ic">errors</code> ناشی از Zod را ضمیمه می‌نماید.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="Sample 400 response (application/problem+json)" data-lang="json" data-hl="2-8"><code>{
+  "type": "https://physiocoach.devbench.ir/problems/400",
+  "title": "Bad Request",
+  "detail": "Validation failed.",
+  "instance": "/api/v1/workout-sessions",
+  "traceId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "auditLogId": null,
+  "errors": [{ "path": ["dayIndex"], "message": "Expected number" }]
+}</code></pre>
+      <ul class="space-y-2.5 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">type</code>: یک URI پایدار که دسته‌بندی مشکل را بر اساس کد وضعیت HTTP مشخص می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200"><code class="ic">title</code>: خلاصه کوتاه و خوانا برای انسان برگرفته از آرایه <code class="ic">STATUS_TITLES[status]</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200"><code class="ic">detail</code>: پیام دقیق و مشخص (<code class="ic">candidate.message</code>) مربوط به این رخداد خاص.</span></li>
+        <li class="flex gap-3"><span class="badge-num">4</span><span class="text-storm-200"><code class="ic">instance</code>: مسیر کامل درخواستی که منجر به خطا شده از طریق <code class="ic">req.originalUrl</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">5</span><span class="text-storm-200"><code class="ic">traceId</code>: شناسه توزیع‌شده UUID درخواست برگرفته از <code class="ic">req.traceId</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">6</span><span class="text-storm-200"><code class="ic">auditLogId</code>: خطاهای مرتبط با هوش مصنوعی را مستقیماً به جدول <code class="ic">ai_audit_logs</code> پیوند می‌دهد (یا مقدار <code class="ic">null</code>).</span></li>
+        <li class="flex gap-3"><span class="badge-num">7</span><span class="text-storm-200"><code class="ic">errors</code>: آرایه در سطح فیلد <code class="ic">error.issues</code> که هنگام وقوع <code class="ic">error instanceof ZodError</code> در پاسخ قرار می‌گیرد.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">دسته‌بندی خودکار خطاها و کنترل هشدارهای لاگ (Log Noise Control)</h4>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-storm-700">
+      <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-storm-800 text-right">
+          <tr>
+            <th class="p-4 font-medium text-storm-300 w-1/3">منبع خطا در <code class="ic">resolveStatusCode()</code></th>
+            <th class="p-4 font-semibold text-white">کد وضعیت HTTP</th>
+            <th class="p-4 font-semibold text-vivid-300">هشدار در <code class="ic">console.error</code>؟</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-storm-700 bg-storm-900">
+          <tr>
+            <td class="p-4 text-storm-200"><code class="ic">ZodError</code></td>
+            <td class="p-4 font-mono text-storm-100">400 Bad Request</td>
+            <td class="p-4 text-vivid-300">خیر (اشتباه در ورودی کلاینت)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-200"><code class="ic">AuthError</code></td>
+            <td class="p-4 font-mono text-storm-100">401 / 403 / 409</td>
+            <td class="p-4 text-vivid-300">خیر (نتیجه منطق احراز هویت دامنه)</td>
+          </tr>
+          <tr>
+            <td class="p-4 text-storm-200">خطای ناشناخته / کرش مهارنشده <code class="ic">Error</code></td>
+            <td class="p-4 font-mono text-coral-300">500 Internal Server Error</td>
+            <td class="p-4 text-coral-300">بله (<code class="ic">status &gt;= 500</code> پیام <code class="ic">request.failed</code> را لاگ می‌کند)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">تنها خطاهای با وضعیت <code class="ic">status &gt;= 500</code> را لاگ بحرانی کنید. هرگز با وارد کردن رمز عبور اشتباه توسط یک کاربر (<code class="ic">401</code>) هشدارهای مانیتورینگ خطا را پر نکنید؛ آلارم‌ها فقط زمانی باید فعال شوند که خود سرور با شکست مواجه شده باشد.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-10" data-toc="۱.۱۰ محدودسازی نرخ درخواست" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.10</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">پراکسی‌های معکوس · هدر Retry-After · مدیریت حافظه مقید</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">محدودسازی نرخ درخواست پشت پراکسی</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">پشت شبکه کلودفلر، آی‌پی سوکت TCP همان آی‌پی پراکسی است. سیستم محدودکننده نرخ درخواست باید <mark class="hl">هدر معتبر لبه شبکه را بخواند</mark> و حافظه خود را بدون نیاز به تایمرهای سراسری پاک‌سازی کند.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="user-check" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">نگهبان یک باشگاه شبانه تعداد دفعات ورود را بر اساس کارت شناسایی اختصاصی هر فرد (<code class="ic">cf-connecting-ip</code>) می‌شمارد، نه بر اساس پلاک تاکسی مشترکی (<code class="ic">req.socket.remoteAddress</code>) که همه را جلوی درب پیاده کرده است.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">چرا هدر <code class="ic">cf-connecting-ip</code> بر <code class="ic">x-forwarded-for</code> اولویت دارد</h4>
+    <p class="text-storm-200 max-w-3xl">فایل <code class="ic">src/auth/rate-limit.ts</code> از اندپوینت‌های <code class="ic">/auth/login</code>، <code class="ic">/auth/register</code> و <code class="ic">/auth/refresh</code> در برابر حملات آزمون مکرر اطلاعات کاربری (Credential Stuffing) محافظت می‌کند. پشت کلودفلر، مقدار <code class="ic">req.socket.remoteAddress</code> در حقیقت آی‌پی پراکسی کلودفلر است، نه آی‌پی واقعی کلاینت.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>پشت کلودفلر، آی‌پی سوکت TCP همان آی‌پی پراکسی کلودفلر است، در حالی که آی‌پی واقعی کلاینت در هدر cf-connecting-ip درج شده است</title>
+          <rect x="14" y="55" width="170" height="110" rx="14" fill="#153139" stroke="#2E464C"/>
+          <text x="99" y="92" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">کلاینت واقعی</text>
+          <text x="99" y="116" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">203.0.113.42</text>
+          <text x="99" y="138" text-anchor="middle" fill="#879497" font-size="13">آی‌پی حقیقی کاربر</text>
+
+          <line x1="184" y1="110" x2="244" y2="110" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="252" y="45" width="210" height="130" rx="14" fill="#153139" stroke="#02EFF0"/>
+          <text x="357" y="78" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">پراکسی لبه Cloudflare</text>
+          <text x="357" y="102" text-anchor="middle" fill="#81F7F7" font-size="13">بازنویسی هدرهای جعلی</text>
+          <text x="357" y="124" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">cf-connecting-ip: 203.0.113.42</text>
+          <text x="357" y="148" text-anchor="middle" fill="#FF7A6B" font-size="13">آی‌پی سوکت: 172.68.10.5</text>
+
+          <line x1="462" y1="88" x2="520" y2="72" stroke="#02EFF0" stroke-width="2.2" marker-end="url(#arw-cyan)"/>
+          <line x1="462" y1="138" x2="520" y2="154" stroke="#FF7A6B" stroke-width="2.2" marker-end="url(#arw-coral)"/>
+
+          <rect x="528" y="30" width="218" height="72" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="637" y="60" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">هدر: cf-connecting-ip</text>
+          <text x="637" y="82" text-anchor="middle" fill="#81F7F7" font-size="13">203.0.113.42 (محدودسازی به ازای هر کاربر)</text>
+
+          <rect x="528" y="124" width="218" height="72" rx="12" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="637" y="154" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">req.socket.remoteAddress</text>
+          <text x="637" y="176" text-anchor="middle" fill="#879497" font-size="13">172.68.10.5 (مسدود شدن کل کاربران!)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">کلودفلر هدر <code class="ic">cf-connecting-ip</code> را برابر آی‌پی واقعی کلاینت قرار داده و هرگونه هدر جعلی ارسالی از سمت کاربر را بازنویسی و باطل می‌کند (آی‌پی‌ها نمونه هستند).</figcaption>
+    </figure>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">اولویت‌بندی هدرها در تابع <code class="ic">getClientKey(c)</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> اجرای مرحله‌ای</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">01 · اولویت اول</p>
+          <p class="font-semibold text-white"><code class="ic">cf-connecting-ip</code></p>
+          <p class="text-xs text-storm-300">آی‌پی کلاینت مورد اعتماد کلودفلر</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02 · گام نخست</p>
+          <p class="font-semibold text-white"><code class="ic">x-forwarded-for</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">.split(',')[0]?.trim()</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03 · پشتیبان</p>
+          <p class="font-semibold text-white"><code class="ic">x-real-ip</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">realIp?.trim()</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04 · پیش‌فرض</p>
+          <p class="font-semibold text-white"><code class="ic">'unknown'</code></p>
+          <p class="text-xs text-storm-300">در صورت نبود هیچ هدری</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/auth/rate-limit.ts" data-lang="ts" data-hl="2-4,6-8,11"><code>function getClientKey(c: ExpressRouteContext): string {
+  const cfConnectingIp = c.req.header('cf-connecting-ip');
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  const forwardedFor = c.req.header('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0]?.trim() || 'unknown';
+  }
+
+  const realIp = c.req.header('x-real-ip');
+  return realIp?.trim() || 'unknown';
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">هدر <code class="ic">cf-connecting-ip</code> در ابتدا بررسی می‌شود چرا که کلودفلر هرگونه مقدار جعلی ارسال‌شده توسط کلاینت را بازنویسی می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">هدر <code class="ic">x-forwarded-for</code> می‌تواند شامل رشته‌ای مثل <code class="ic">client, proxy1, proxy2</code> باشد، بنابراین دستور <code class="ic">.split(',')[0]?.trim()</code> آی‌پی آغازین کلاینت را استخراج می‌کند.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">هدر استاندارد <code class="ic">Retry-After</code> و کنترل مرز حافظه</h4>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">5</p>
+        <p class="mt-1 text-sm text-storm-300">تعداد تلاش مجاز در هر پنجره</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-vivid-400">60 s</p>
+        <p class="mt-1 text-sm text-storm-300">مدت زمان پنجره زمانی</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-white">1,000</p>
+        <p class="mt-1 text-sm text-storm-300">آستانه هرس باکت‌های <code class="ic">authBuckets</code></p>
+      </div>
+      <div class="reveal rounded-2xl bg-coral-500/10 border border-coral-400/40 p-5">
+        <p class="font-mono text-3xl md:text-4xl font-semibold text-coral-300">429</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">Too Many Requests</code></p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> پاسخ خام <code class="ic">429 Too Many Requests</code></p>
+        <p class="mt-3 text-storm-200">پس از ۵ تلاش در ۶۰ ثانیه درخواست را رد می‌کند، اما اعلام نمی‌کند چه زمانی پنجره محدودیت ریست می‌شود.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ اپلیکیشن موبایل نمی‌تواند شمارش معکوس یا تاخیر هوشمند (Backoff) را نمایش دهد</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> کد <code class="ic">429</code> به همراه <code class="ic">Retry-After: 37</code> (نمونه)</p>
+        <p class="mt-3 text-storm-200">ارسال هدر با دستور <code class="ic">c.header('retry-after', String(Math.ceil((bucket.resetAt - now) / 1000)))</code>.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ ثانیه‌های دقیق انتظار پیش از تلاش مجدد را به کلاینت اطلاع می‌دهد</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">چگونه نگاشت <code class="ic">authBuckets</code> بدون تایمر سراسری کم‌حجم می‌ماند</figcaption>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">آی‌پی جدید ← باکت جدید</p>
+          <p class="text-xs text-storm-300">هر کلید کلاینت یک رکورد به نگاشت <code class="ic">Map</code> اضافه می‌کند.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02 · رسیدن تعداد به ۱,۰۰۰</p>
+          <p class="font-semibold text-white">هرس در درخواست بعدی</p>
+          <p class="text-xs text-storm-300">تابع <code class="ic">pruneExpiredBuckets(now)</code> باکت‌های منقضی را حذف می‌کند.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white">حافظه در محدوده امن باقی می‌ماند</p>
+          <p class="text-xs text-storm-300">نیازی به <code class="ic">setInterval()</code> نیست که در اسکوپ سراسری ورکرها ممنوع است.</p>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">بدون پاک‌سازی، میلیون‌ها آی‌پی جعلی می‌توانستند نگاشت <code class="ic">Map</code> را تا مرز پر شدن حافظه و کرش OOM پر کنند.</p>
+    </figure>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن · عدم امکان استفاده از <code class="ic">setInterval()</code> در اسکوپ سراسری ورکرها</p>
+      <p class="mt-2 text-white font-semibold">تایمرهای پس‌زمینه <code class="ic">setInterval()</code> در اسکوپ سراسری کلودفلر ورکرز ممنوع هستند</p>
+      <p class="mt-1 text-sm text-storm-200">یک مهاجم ممکن است با ارسال درخواست‌هایی از میلیون‌ها آی‌پی جعلی تلاش کند خطای سرریز حافظه (OOM) ایجاد کند. شما نمی‌توانید برای پاک کردن شیء <code class="ic">Map</code> به تایمرهای پس‌زمینه تکیه کنید. رویکرد هرس تنبل (Lazy Pruning) درون مسیر پردازش درخواست در آستانه <code class="ic">1,000</code> رکورد، حافظه را بدون نیاز به تایمرهای سراسری مقید نگه می‌دارد.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ex-11" data-toc="۱.۱۱ تست یکپارچه Express" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.11</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">پورت موقت صفر · پل Fetch · خط لوله سرتاسری</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">تست‌نویسی برای Express</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">پورت شماره <code class="ic">0</code> را به متد <code class="ic">server.listen(0, '127.0.0.1')</code> پاس دهید تا هسته سیستم‌عامل <mark class="hl">یک پورت موقت و آزاد لوپ‌بک</mark> را به هر تست هم‌زمان اختصاص دهد.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="door-open" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">هاردکد کردن پورت <code class="ic">8787</code> شبیه هتلی است که ۵۰ مسافر هم‌زمان بر سر اتاق شماره ۸۷۸۷ دعوا کنند! پاس دادن پورت <code class="ic">0</code> به مسئول پذیرش اجازه می‌دهد هر اتاق خالی موجود را به مسافر تحویل دهد و هنگام خروج، کلید را پس بگیرد.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">چرا آزمون‌های سنتی API با شکست مواجه می‌شوند</h4>
+    <p class="text-storm-200 max-w-3xl">بسیاری از تیم‌ها هنگام تست APIهای اکسپرس در یکی از دو دام رایج گرفتار می‌شوند: یا همه چیز را ماک می‌کنند، یا یک پورت مشخص را هاردکد می‌کنند.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> دو رویکرد معیوب در تست‌نویسی</p>
+        <p class="mt-3 text-storm-200"><strong>گزینه اول (ماک کردن همه‌چیز):</strong> تست‌ها سبز می‌مانند در حالی که کوئری‌های SQL یا ترتیب میان‌افزارها خراب است. <br><strong>گزینه دوم (پورت ثابت <code class="ic">localhost:8787</code>):</strong> فایل‌های تست موازی فوراً با خطا متوقف می‌شوند.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">→ Error: listen EADDRINUSE: address already in use :::8787</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> پورت زودگذر <code class="ic">0</code> + پل رابط <code class="ic">.fetch()</code></p>
+        <p class="mt-3 text-storm-200"><code class="ic">server.listen(0, '127.0.0.1')</code> از هسته سیستم‌عامل یک پورت لوپ‌بک آزاد در همان لحظه می‌گیرد. درخواست واقعی HTTP را اجرا کرده و سرور را در بلوک <code class="ic">finally</code> می‌بندد.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">→ اجرای هم‌زمان ۵۰ فایل تست در Vitest بدون کوچک‌ترین تداخل پورت</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پورت موقت <code class="ic">0</code> به همراه <code class="ic">testableApp.fetch</code> در فایل <code class="ic">src/app.ts</code></h4>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 760 240" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>تست‌های هم‌زمان Vitest پورت ۰ را به هسته سیستم‌عامل می‌فرستند، پورت‌های موقت مجزای ۵۴۳۲۱ و ۵۴۳۲۲ را روی 127.0.0.1 دریافت می‌کنند و سرور را در finally می‌بندند</title>
+          <rect x="14" y="24" width="168" height="80" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="98" y="58" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">ورکر ویتست ۱</text>
+          <text x="98" y="80" text-anchor="middle" fill="#81F7F7" font-size="13">listen(0, '127.0.0.1')</text>
+
+          <rect x="14" y="132" width="168" height="80" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="98" y="166" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">ورکر ویتست ۲</text>
+          <text x="98" y="188" text-anchor="middle" fill="#81F7F7" font-size="13">listen(0, '127.0.0.1')</text>
+
+          <line x1="182" y1="64" x2="236" y2="64" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+          <line x1="182" y1="172" x2="236" y2="172" stroke="#02EFF0" stroke-width="2" marker-end="url(#arw-cyan)"/>
+
+          <rect x="244" y="24" width="236" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="362" y="56" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">کرنل سیستم‌عامل ← 127.0.0.1:54321</text>
+          <text x="362" y="79" text-anchor="middle" fill="#FFFFFF" font-size="13">fetch('/api/v1/health')</text>
+
+          <rect x="244" y="132" width="236" height="80" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="362" y="164" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">کرنل سیستم‌عامل ← 127.0.0.1:54322</text>
+          <text x="362" y="187" text-anchor="middle" fill="#FFFFFF" font-size="13">fetch('/api/v1/auth/login')</text>
+
+          <line x1="480" y1="64" x2="534" y2="64" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+          <line x1="480" y1="172" x2="534" y2="172" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="542" y="24" width="204" height="80" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="644" y="56" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">finally { server.close() }</text>
+          <text x="644" y="79" text-anchor="middle" fill="#81F7F7" font-size="13">آزادسازی تمیز پورت ۵۴۳۲۱</text>
+
+          <rect x="542" y="132" width="204" height="80" rx="12" fill="url(#g-brand)" stroke="#02EFF0"/>
+          <text x="644" y="164" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">finally { server.close() }</text>
+          <text x="644" y="187" text-anchor="middle" fill="#81F7F7" font-size="13">آزادسازی تمیز پورت ۵۴۳۲۲</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">هر فایل آزمون یک پورت موقت آزاد اختصاصی (<code class="ic">54321</code>, <code class="ic">54322</code>, ...) را روی لوپ‌بک <code class="ic">127.0.0.1</code> دریافت کرده و در بخش <code class="ic">finally</code> آزاد می‌سازد.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app.ts" data-lang="ts" data-hl="2-3,7,14,16"><code>const testableApp = app as unknown as TestableExpressApp;
+testableApp.fetch = async (input, init, bindings) =&gt; {
+  app.locals.workerEnv = bindings ?? {};
+  const server = createServer(app);
+  await new Promise&lt;void&gt;((resolve, reject) =&gt; {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve); // &lt;-- Port 0 = OS assigns a free ephemeral port!
+  });
+
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Test server did not start.');
+    // ... forwards Web Standard Request to http://127.0.0.1:${address.port}
+    return await fetch(`http://127.0.0.1:${address.port}${parsed.pathname}${parsed.search}`, requestInit);
+  } finally {
+    await new Promise&lt;void&gt;((resolve) =&gt; server.close(() =&gt; resolve()));
+  }
+};</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">دستور <code class="ic">server.listen(0, '127.0.0.1', resolve)</code> یک پورت آزاد موقت را منحصراً روی شبکه لوپ‌بک متصل می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">فراخوانی <code class="ic">fetch(...)</code> یک درخواست واقعی HTTP را از طریق پشته TCP نودجی‌اس به پورت اختصاص‌یافته <code class="ic">address.port</code> ارسال می‌نماید.</span></li>
+        <li class="flex gap-3"><span class="badge-num">3</span><span class="text-storm-200">بلوک <code class="ic">finally</code> تضمین می‌کند که متد <code class="ic">server.close()</code> حتی در صورت شکست ادعاها (Assertions) یا خطای درخواست حتماً اجرا شود.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">اعتبارسنجی کامل پشته HTTP در تک‌تک تست‌ها</h4>
+    <p class="text-storm-200 max-w-3xl">برخلاف فراخوانی مستقیم یک تابع کنترلر در تست‌های واحد معمولی، فراخوانی <code class="ic">app.fetch('/api/v1/health')</code> یک درخواست واقعی شبکه می‌فرستد که از کل زنجیره میان‌افزارها به طور سرتاسری عبور می‌کند.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">خط لوله واقعی پیموده‌شده توسط <code class="ic">app.fetch()</code></p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> اجرای مرحله‌ای</button>
+      </div>
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">cors()</code></p>
+          <p class="text-xs text-storm-300">هدرهای Preflight</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">express.json()</code></p>
+          <p class="text-xs text-storm-300">استریم → <code class="ic">req.body</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">03</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">traceId</code></p>
+          <p class="text-xs text-storm-300"><code class="ic">x-request-id</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">authMiddleware</code></p>
+          <p class="text-xs text-storm-300">توکن JWT و لیست مجاز</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-storm-400">05</p>
+          <p class="font-semibold text-white text-sm">نام مستعار (Aliasing)</p>
+          <p class="text-xs text-storm-300">بازنویسی <code class="ic">req.url</code></p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/50 bg-storm-800 px-3 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">06</p>
+          <p class="font-semibold text-white text-sm">مسیر (Route)</p>
+          <p class="text-xs text-storm-300">اجرای کنترلر</p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-4 h-4"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-3 py-3">
+          <p class="font-mono text-[11px] text-coral-300">07</p>
+          <p class="font-semibold text-white text-sm"><code class="ic">errorHandler</code></p>
+          <p class="text-xs text-storm-300">خروجی جیسون RFC 7807</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ex-12" data-toc="۱.۱۲ بیست پرسش و پاسخ مصاحبه" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">1.12</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">آمادگی مصاحبه · ۲۰ سؤال سرعتی · معرفی ۶۰ ثانیه‌ای معماری</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">چک‌لیست سرعتی و فشرده مصاحبه</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">این <mark class="hl">۲۰ پرسش و پاسخ تخصصی بک‌اند سنیور</mark> و متن ۶۰ ثانیه‌ای معرفی معماری را درست پیش از جلسه مصاحبه مرور کنید.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="zap" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">در دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">این چک‌لیست مانند چک‌لیست نهایی خلبان روی باند فرودگاه است. همه سیستم‌ها قبلاً ساخته و پرداخته شده‌اند؛ اکنون فقط آخرین نگاه را به نشانگرها می‌اندازید تا آماده برخاستن شوید.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">هسته Node.js و Express (پرسش‌های ۱ تا ۵)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱. آیا Node.js تک‌رشته‌ای (Single-threaded) است؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">کدهای جاوااسکریپت شما روی یک رشته منفرد (حلقه رویداد یا V8 Event Loop) اجرا می‌شوند.</strong> یک حلقه سنگین محاسباتی یا تابع همگام <code class="ic">JSON.parse</code> حجیم، تمامی کاربران هم‌زمان را مسدود می‌کند.</p>
+        <p><strong class="text-vivid-300">ران‌تایم C++ (کتابخانه <code class="ic">libuv</code>) و هسته سیستم‌عامل چندرشته‌ای و غیرهمگام هستند.</strong> کتابخانه <code class="ic">libuv</code> از یک استخر پس‌زمینه نخ‌ها (به طور پیش‌فرض ۴ رشته) برای عملیات ورودی/خروجی فایل، پرس‌وجوهای DNS و پردازش‌های رمزنگاری (<code class="ic">PBKDF2</code>) استفاده می‌کند. همچنین سوکت‌های شبکه (<code class="ic">http</code> و TCP در PostgreSQL) را به APIهای ناهمگام کرنل سیستم‌عامل (مثل <code class="ic">epoll</code> در لینوکس و <code class="ic">kqueue</code> در macOS) محول می‌نماید.</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-3 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-3.5">
+          <p class="font-mono text-coral-300 font-semibold">حلقه رویداد V8 (تک‌رشته)</p>
+          <p class="mt-1 text-storm-200">کال‌بک‌های JS را اجرا می‌کند. با حلقه‌های همگام یا <code class="ic">JSON.parse</code> حجیم مسدود می‌شود.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">استخر libuv (۴ نخ)</p>
+          <p class="mt-1 text-storm-200">عملیات فایل I/O، پرس‌وجوی DNS و محاسبات رمزنگاری <code class="ic">PBKDF2</code> را اجرا می‌کند.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">کرنل ناهمگام سیستم‌عامل</p>
+          <p class="mt-1 text-storm-200">سازوکارهای <code class="ic">epoll</code> و <code class="ic">kqueue</code> سوکت‌های شبکه HTTP و Postgres را مدیریت چندگانه می‌کنند.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۲. تفاوت میان <code class="ic">app.use('/api', fn)</code> و <code class="ic">app.get('/api', fn)</code> چیست؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>متد <code class="ic">app.use</code> با <strong>هر متد HTTP</strong> تطابق دارد و بر اساس <strong>پیشوند مسیر</strong> مطابقت می‌دهد (<code class="ic">/api</code>، <code class="ic">/api/users</code>، <code class="ic">/api/v1/health</code>)، و پیشوند <code class="ic">/api</code> را داخل تابع <code class="ic">fn</code> از مقدار <code class="ic">req.url</code> حذف می‌کند.</p>
+        <p>متد <code class="ic">app.get</code> <strong>صرفاً با درخواست‌های <code class="ic">GET</code></strong> مطابقت دارد و به <strong>تطابق دقیق مسیر</strong> نیاز دارد (فقط مسیر <code class="ic">/api</code>).</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-2 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">app.use('/api', fn)</p>
+          <p class="mt-1 text-storm-200">تمامی متدها · تطابق پیشوندی (<code class="ic">/api/*</code>) · حذف پیشوند <code class="ic">/api</code> از <code class="ic">req.url</code></p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">app.get('/api', fn)</p>
+          <p class="mt-1 text-storm-200">صرفاً متد <code class="ic">GET</code> · تطابق دقیق مسیر (فقط <code class="ic">/api</code>)</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۳</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۳. اکسپرس چگونه متوجه می‌شود که یک میان‌افزار، هندلر خطاست؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>با بررسی مقدار <code class="ic">fn.length === 4</code> در تعریف تابع (<code class="ic">(err, req, res, next)</code>). چنانچه پارامتر چهارم <code class="ic">next</code> را حذف کنید، اکسپرس آن را یک میان‌افزار ۳ آرگومانی معمولی قلمداد کرده و هنگام بروز خطا هرگز آن را صدا نخواهد زد.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۴</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۴. اگر پس از شروع استریم پاسخ با <code class="ic">res.write()</code> خطایی رخ دهد، چه پیش می‌آید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>به محض اینکه هدرهای HTTP و نخستین بایت‌های بدنه روی سوکت TCP فلاش (ارسال) شوند، دیگر نمی‌توانید کد وضعیت HTTP را به <code class="ic">500</code> تغییر دهید. در این حالت، مدیریت پیش‌فرض اکسپرس مقدار <code class="ic">res.headersSent</code> را بررسی کرده و سوکت را می‌بندد تا کلاینت متوجه ناقص ماندن انتقال داده شود.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۵</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۵. مفهوم فشار معکوس (Backpressure) در سرورهای HTTP مبتنی بر Node.js چیست؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>گاهی یک سرور پرسرعت فایل حجیم یا کرسر دیتابیس را سریع‌تر از توانایی دانلود یک کلاینت موبایل با سرعت اینترنت پایین می‌خواند. در این سناریو، بافرهای حافظه سرور انباشته شده و می‌توانند به کرش سرور منجر شوند. متدهای <code class="ic">stream.pipe()</code> یا <code class="ic">pipeline()</code> وقتی بافر نوشتن سوکت پر شود (زمانی که متد <code class="ic">write()</code> مقدار <code class="ic">false</code> بازگرداند)، خواندن داده را موقتاً متوقف می‌کنند و پس از رخداد رویداد <code class="ic">'drain'</code> به صورت خودکار خواندن را از سر می‌گیرند.</p>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-storm-700 text-xs font-mono">
+        <span class="rounded-lg bg-storm-900 border border-storm-600 px-3 py-1.5 text-storm-100">خواندن سریع از منبع</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-coral-500/10 border border-coral-400/40 px-3 py-1.5 text-coral-300">بازگشت false از write()</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-storm-600 px-3 py-1.5 text-white">توقف خواندن</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-vivid-400/15 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">رویداد 'drain'</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">از سرگیری استریم</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">امنیت و احراز هویت (پرسش‌های ۶ تا ۹)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۶</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۶. چرا برای Refresh Token به جای PBKDF2 یا bcrypt از هش SHA-256 استفاده می‌شود؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">گذرواژه‌ها آنتروپی پایینی دارند:</strong> انسان‌ها معمولاً رمزهای ساده و قابل حدس انتخاب می‌کنند، بنابراین نیازمند یک الگوریتم هش <strong>کند</strong> (مانند PBKDF2 یا Argon2) هستند تا جلوی حملات حدس آفلاین (Brute-force) گرفته شود.</p>
+        <p><strong class="text-vivid-300">توکن‌های تجدید آنتروپی بسیار بالایی دارند:</strong> این توکن‌ها شامل ۳۲ بایت (۲۵۶ بیت) داده تصادفی رمزنگاری‌شده قوی (<code class="ic">crypto.getRandomValues</code>) هستند. با داشتن <code class="ic">2^256</code> حالت ممکن، حدس زدن آن‌ها از نظر ریاضی غیرممکن است. یک تابع هش سریع رمزنگاری مثل <code class="ic">SHA-256</code> توکن را در صورت نشت احتمالی دیتابیس کاملاً ایمن نگه می‌دارد، بدون اینکه در هر بار تمدید توکن منابع باارزش پردازنده را هدر دهد.</p>
+      </div>
+      <div class="mt-5 grid sm:grid-cols-2 gap-3 pt-4 border-t border-storm-700 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-3.5">
+          <p class="font-mono text-coral-300 font-semibold">رمز عبور کاربر · آنتروپی پایین</p>
+          <p class="mt-1 text-storm-200">آسیب‌پذیر در برابر حملات دیکشنری ← نیازمند الگوریتم کند <code class="ic">PBKDF2</code> (با ۵۰,۰۰۰ دور تکرار) یا <code class="ic">Argon2</code>.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">توکن ۳۲ بایتی · ۲ به توان ۲۵۶ حالت</p>
+          <p class="mt-1 text-storm-200">غیرقابل حدس زدن ← هش سریع <code class="ic">SHA-256</code> از دیتابیس محافظت می‌کند بدون اینکه ذره‌ای CPU هدر رود.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۷</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۷. اگر نشست‌ها را روی سرور ذخیره نکنیم، چگونه می‌توان از سرقت Refresh Token جلوگیری کرد؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>هیچ راهی وجود ندارد؛ به همین دلیل است که پیاده‌سازی رفرش‌توکن‌های کاملاً بدون‌وضعیت (Stateless) یک ضدالگو محسوب می‌شود. شما ملزم به ذخیره فراداده‌های نشست (<code class="ic">auth_sessions</code>) و ثبت تاریخچه چرخش توکن (<code class="ic">auth_refresh_token_history</code>) در پایگاه داده هستید. اگر توکنی که قبلاً در چرخه باطل شده مجدداً ارائه شود، کل خانواده توکن‌های آن نشست بی‌درنگ باطل می‌شوند.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۸. چگونه جلوی حملات کانال جانبی زمان‌بندی (Timing Attacks) را هنگام لاگین می‌گیرید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>ابتدا هش رمز عبور را با حلقه‌ای که بر پایه زمان ثابت عمل می‌کند مقایسه کنید (<code class="ic">timingSafeEqual</code>). ثانیاً اگر ایمیل کاربر در دیتابیس یافت نشد، رمز واردشده را در برابر یک هش ساختگی <code class="ic">DUMMY_PASSWORD_HASH</code> اعتبارسنجی کنید. بدین ترتیب، وضعیت «کاربر پیدا نشد» دقیقاً همان حدود ۴۰ میلی‌ثانیه پردازش CPU توسط PBKDF2 را صرف می‌کند که وضعیت «رمز عبور اشتباه است» صرف می‌نماید و مهاجم نمی‌تواند از روی زمان پاسخ به وجود کاربر پی ببرد.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۹</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۹. توکن‌ها در فرانت‌اند کجا باید ذخیره شوند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>رویکرد اول استفاده از کوکی‌های دارای فلگ‌های <code class="ic">HttpOnly; Secure; SameSite=Lax</code> است که در برابر حملات XSS کاملاً ایمن هستند اما برای متدهای تغییردهنده نیاز به محافظت در برابر CSRF دارند. رویکرد دوم، نگهداری Access Token در حافظه موقت جاوااسکریپت همراه با Refresh Token در حال چرخش، تعریف سیاست امنیتی سفت‌وسخت محتوا (CSP)، حذف کامل روزنه‌های XSS و تشخیص استفاده مجدد در سمت سرور است.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پایگاه داده و تراکنش‌ها (پرسش‌های ۱۰ تا ۱۲)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۰</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۰. خطای N+1 Query چیست و در Drizzle چگونه از آن پیشگیری می‌کنید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>حالتی است که ابتدا ۲۰ جلسه تمرینی را دریافت می‌کنید (<code class="ic">1</code> کوئری) و سپس در یک حلقه <code class="ic">for</code> به ازای هر جلسه یک کوئری <code class="ic">SELECT</code> جداگانه می‌زنید (<code class="ic">20</code> کوئری). راهکار جلوگیری از این مشکل، دریافت یک‌باره تمامی تمرینات مربوطه در یک کوئری واحد با <code class="ic">inArray(exerciseLogs.workoutSessionId, sessionIds)</code> یا ایجاد <code class="ic">JOIN</code> در SQL است؛ سپس ردیف‌ها را در حافظه سرور با یک شیء <code class="ic">Map</code> گروه‌بندی می‌کنید.</p>
+      </div>
+      <figure class="mt-5 rounded-2xl border border-storm-700 bg-storm-900 p-4">
+        <figcaption class="text-xs font-semibold text-white">بارگذاری ۲۰ جلسه تمرین به همراه تمرینات مرتبط</figcaption>
+        <div data-chart class="mt-3 space-y-3">
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+            <span class="col-span-2 sm:col-span-1 text-xs text-storm-200">حلقه N+1 (<code class="ic">1 + 20</code>)</span>
+            <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="21"></div></div>
+            <span class="font-mono text-xs text-coral-300 text-left">21 queries</span>
+          </div>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[14rem_1fr_6.5rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+            <span class="col-span-2 sm:col-span-1 text-xs text-storm-200"><code class="ic">inArray()</code> + <code class="ic">Map</code></span>
+            <div class="h-3 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="2"></div></div>
+            <span class="font-mono text-xs text-vivid-300 text-left">2 queries</span>
+          </div>
+        </div>
+      </figure>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۱. چگونه جلوی بروز شرایط رقابتی (Race Condition) را هنگام ویرایش هم‌زمان یک رکورد می‌گیرید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>از سازوکار <strong>کنترل هم‌زمانی خوش‌بینانه (Optimistic Concurrency Control / Compare-And-Swap)</strong> در یک کوئری اتمیک مانند <code class="ic">UPDATE ... WHERE id = $1 AND refresh_token_hash = $2 RETURNING id</code> استفاده کنید. روش جایگزین، به‌کارگیری <strong>قفل‌گذاری بدبینانه (Pessimistic Locking)</strong> با دستور <code class="ic">SELECT ... FOR UPDATE</code> درون یک تراکنش دیتابیس است.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۲. چرا هنگام استفاده از PgBouncer یا Cloudflare Hyperdrive در حالت تراکنش، تنظیم <code class="ic">prepare: false</code> الزامی است؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>استخرهای اتصال در حالت تراکنش، پس از پایان هر تراکنش، اتصال فیزیکی بک‌اند در پستگرس را مجدداً به درخواست دیگری تخصیص می‌دهند. عبارات آماده نام‌دار (Named Prepared Statements) به یک اتصال خاص وابسته هستند؛ بنابراین کوئری بعدی ممکن است به بک‌اندی هدایت شود که اصلاً آن عبارت آماده را در حافظه خود ندارد و منجر به بروز خطای سیستمی شود.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">طراحی سیستم، مشاهده‌پذیری و عملیات (پرسش‌های ۱۳ تا ۲۰)</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۳</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۳. خاموش‌سازی اصولی (Graceful Shutdown) در یک کانتینر Express چگونه پیاده می‌شود؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>به سیگنال <code class="ic">SIGTERM</code> ارسال‌شده از سوی Kubernetes یا Docker گوش فرا دهید و سپس این ۴ مرحله ترتیبی را اجرا کنید:</p>
+      </div>
+      <div class="mt-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">۱. توقف ترافیک تازه</p>
+          <p class="mt-1 text-storm-200">فراخوانی متد <code class="ic">server.close()</code> برای عدم پذیرش اتصالات جدید.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">۲. تخلیه درخواست‌های فعال</p>
+          <p class="mt-1 text-storm-200">مهلت دادن به درخواست‌های در حال اجرا برای اتمام کار (با سقف زمانی مثلاً ۱۵ ثانیه).</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-3.5">
+          <p class="font-mono text-white font-semibold">۳. بستن استخر دیتابیس</p>
+          <p class="mt-1 text-storm-200">قطع ارتباط استخر اتصالات پایگاه داده (<code class="ic">await sql.end()</code>).</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-vivid-400/50 p-3.5">
+          <p class="font-mono text-vivid-300 font-semibold">۴. خروج تمیز پروسس</p>
+          <p class="mt-1 text-storm-200">خروج از برنامه با فراخوانی دستور <code class="ic">process.exit(0)</code>.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۴</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۴. مفهوم برابری توان (Idempotency) چیست و چرا در <code class="ic">POST /workout-plans/generate</code> از <code class="ic">inputHash</code> استفاده می‌شود؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>یک عملیات زمانی برابرتوان یا Idempotent است که تکرار چندباره آن دقیقاً همان اثری را داشته باشد که یک‌بار فراخوانی آن دارد. با هش کردن مشخصات و ارزیابی‌های کاربر (<code class="ic">buildPlanInputHash</code>)، می‌توانیم درخواست‌های تکراری را شناسایی کرده، کانتکست اعتبارسنجی‌شده را مجدداً استفاده کنیم و لاگ‌های حسابرسی را همبسته سازیم.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۵</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۵. تفاوت کدهای وضعیت <code class="ic">401 Unauthorized</code>، <code class="ic">403 Forbidden</code>، <code class="ic">409 Conflict</code> و <code class="ic">422 Unprocessable Entity</code> چیست؟</h4>
+      <div class="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-vivid-400">401</p>
+          <p class="mt-1 font-semibold text-white">شما چه کسی هستید؟</p>
+          <p class="mt-1 text-storm-300">توکن احراز هویت وجود ندارد یا منقضی شده است.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-vivid-400">403</p>
+          <p class="mt-1 font-semibold text-white">عدم دسترسی مجاز</p>
+          <p class="mt-1 text-storm-300">هویت شما مشخص است، اما اجازه دسترسی به مسیر <code class="ic">/api/v1/admin</code> را ندارید.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-coral-400/40 p-4">
+          <p class="font-mono text-2xl font-semibold text-coral-300">409</p>
+          <p class="mt-1 font-semibold text-white">تعارض وضعیت یا نقض ایمنی</p>
+          <p class="mt-1 text-storm-300">ثبت‌نام با ایمیل تکراری یا رد برنامه ناامن توسط گیت بالینی.</p>
+        </div>
+        <div class="rounded-xl bg-storm-900 border border-storm-600 p-4">
+          <p class="font-mono text-2xl font-semibold text-white">422 / 400</p>
+          <p class="mt-1 font-semibold text-white">داده ورودی نامعتبر</p>
+          <p class="mt-1 text-storm-300">سینتکس بدنه یا اسکیمای اعتبارسنجی داده نامعتبر است.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۶</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۶. چرا پیوست کردن <code class="ic">x-request-id</code> (<code class="ic">traceId</code>) به هدر پاسخ‌ها و خروجی جیسون خطاها حیاتی است؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>وقتی کاربری در یک سیستم توزیع‌شده گزارش خطا می‌دهد، شناسه <code class="ic">traceId</code> مانند نخی تمام گره‌ها را به یکدیگر وصل می‌کند. شما می‌توانید با استفاده از دستور <code class="ic">grep</code> در لاگ‌ها و کوئری در جدول <code class="ic">ai_audit_logs</code>، مسیر دقیق همان یک درخواست را در تمامی سرویس‌ها ردیابی کنید.</p>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-storm-700 text-xs font-mono">
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">PWA</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">لبه Cloudflare</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">ورکر (Worker)</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-white">پستگرس Neon</span>
+        <span class="text-vivid-400">←</span>
+        <span class="rounded-lg bg-storm-900 border border-vivid-400/50 px-3 py-1.5 text-vivid-300">هوش مصنوعی OpenRouter</span>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۷</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۷. چگونه APIهای کند شخص ثالث (مانند مدل‌های زبانی) را در Express مهار می‌کنید تا سرور از کار نیفتد؟</h4>
+      <div class="mt-5 grid gap-2 text-storm-100">
+        <p><strong class="text-vivid-300">۱.</strong> همیشه سیگنال تایم‌اوت <code class="ic">AbortSignal.timeout(timeoutMs)</code> را به تابع <code class="ic">fetch()</code> پاس دهید تا سوکت‌های بی‌پاسخ باعث نشت حافظه نشوند.</p>
+        <p><strong class="text-vivid-300">۲.</strong> مدل‌های جایگزین ترتیبی پیکربندی کنید (<code class="ic">primaryModel</code> ← <code class="ic">fallbackModels</code>).</p>
+        <p><strong class="text-vivid-300">۳.</strong> پیش از هرگونه ذخیره‌سازی در پایگاه داده، پاسخ دریافتی از هوش مصنوعی را با اسکیمای Zod اعتبارسنجی کنید.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۸</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۸. چرا اندپوینت <code class="ic">/api/v1/health</code> باید کوئری <code class="ic">SELECT 1</code> را روی پایگاه داده اجرا کند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>یک بررسی سلامت سطحی که صرفاً شیء <code class="ic">{ ok: true }</code> بازمی‌گرداند تنها زنده بودن پروسس را اثبات می‌کند؛ این بررسی حتی در صورت خرابی رمز عبور دیتابیس یا بن‌بست (Deadlock) استخر اتصالات سبز باقی می‌ماند! اجرای دستور <code class="ic">SELECT 1</code> و سنجش پارامتر <code class="ic">responseTimeMs</code>، سلامت و آمادگی واقعی سامانه را تضمین می‌کند (<code class="ic">200 OK</code> در برابر <code class="ic">503 Service Unavailable</code>).</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · پرسش ۱۹</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">۱۹. مفهوم Prototype Pollution در Express چیست و چگونه از آن جلوگیری می‌کنیم؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p>اگر مهاجم شیء جیسونی مانند <code class="ic">{"__proto__": {"isAdmin": true}}</code> ارسال کند و کدهای شما بدون بررسی کلیدها اقدام به ادغام عمیق (Deep Merge) اشیاء نمایند، مهاجم می‌تواند آبجکت والد <code class="ic">Object.prototype</code> را آلوده سازد. اعتبارسنجی تمامی ورودی‌ها با اسکیماهای سخت‌گیرانه Zod (<code class="ic">z.object({...}).strict()</code>) کلیدهای <code class="ic">__proto__</code> و <code class="ic">constructor</code> را بلافاصله حذف یا رد می‌کند.</p>
+      </div>
+    </article>
+
+    <blockquote class="reveal relative rounded-3xl brand-glow p-7 md:p-10 overflow-hidden">
+      <i data-lucide="quote" class="absolute left-6 top-6 w-16 h-16 text-vivid-400/25"></i>
+      <p class="text-xs uppercase tracking-[.2em] text-vivid-300 font-semibold">پاسخ مثل یک مهندس ارشد · پرسش ۲۰ · معرفی ۶۰ ثانیه‌ای معماری</p>
+      <h4 class="mt-2 text-lg md:text-xl font-semibold text-white">۲۰. معماری بک‌اند PhysioCoach AI را چگونه در ۶۰ ثانیه در ابتدای یک جلسه مصاحبه شرح می‌دهید؟</h4>
+      <p class="mt-4 text-lg md:text-xl text-white font-light leading-relaxed">«بک‌اند سامانه PhysioCoach AI یک API مبتنی بر Express 5 است که با تایپ‌اسکریپت سخت‌گیرانه روی Cloudflare Workers پیاده شده است. این سرویس از طریق استخر اتصال Cloudflare Hyperdrive و به‌کارگیری Drizzle ORM به پایگاه داده Neon PostgreSQL متصل می‌شود. هر درخواست ورودی از یک خط لوله میان‌افزاری مقاوم با رویکرد Fail-closed می‌گذرد: بررسی هدرهای CORS، پارس امن بدنه JSON، الصاق شناسه توزیع‌شده UUID برای ردیابی، و اعتبارسنجی توکن‌های بدون‌وضعیت JWT بر پایه استاندارد Web Crypto. برای احراز هویت، ما از الگوریتم PBKDF2-SHA256 به همراه مقایسه در زمان ثابت و هش ساختگی برای جلوگیری از حملات زمان‌بندی استفاده کرده‌ایم. همچنین سیستم توکن‌های تجدید چرخان هش‌شده با SHA-256 را همراه با قابلیت شناسایی استفاده مجدد پیاده کرده است. برای ساخت برنامه‌های تمرینی با هوش مصنوعی، بک‌اند ابتدا کاتالوگ حرکات بالینی را در پستگرس فیلتر کرده و مدل‌های OpenRouter را با مکانیزم‌های تایم‌اوت و فال‌بک هدایت می‌کند. خروجی مدل با Zod و قوانین قطعی بیومکانیکی سنجیده شده و در نهایت، گزارش کامل در جدول حسابرسی ثبت می‌شود و هرگونه شکست در قالب ساختار استاندارد RFC 7807 بازگردانده می‌شود.»</p>
+    </blockquote>
+  </div>
+</section>

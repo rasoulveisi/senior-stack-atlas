@@ -1,0 +1,53 @@
+<div class="relative overflow-hidden brand-glow border-y border-storm-700 mt-10">
+  <div class="absolute inset-0 grid-dots opacity-60" aria-hidden="true"></div>
+  <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-16 md:py-24">
+    <div class="grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
+      <div class="reveal">
+        <p class="font-mono text-sm text-vivid-300 tracking-[.2em]">فصل ۰۳ · NEXT ISSUE TRACKER</p>
+        <h2 class="mt-4 text-4xl md:text-6xl font-semibold text-white leading-[1.08] tracking-tight">ری‌اکت ۱۹ و نکست ۱۶<br><span class="text-vivid-100">برای توسعه‌دهندگان انگولار</span></h2>
+        <p class="mt-5 text-lg text-storm-100 max-w-lg font-light">هر فصل عادات رایج در دنیای انگولار، علت شکست آن‌ها در پارادایم ری‌اکت، و شیوه اصولی مهندسی ارشد را کالبدشکافی می‌کند.</p>
+        <div class="mt-6 flex flex-wrap gap-2"><span class="chip">React 19</span><span class="chip">Next.js 16.4</span><span class="chip">React Compiler</span><span class="chip">Server Actions</span><span class="chip">Drizzle</span><span class="chip">PGlite</span><span class="chip">Playwright</span></div>
+      </div>
+      <figure class="reveal">
+        <svg viewBox="0 0 460 300" class="w-full h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>درخت کامپوننت که در آن کامپوننت‌های سرور درون کامپوننت‌های کلاینت قرار گرفته‌اند (الگوی دونات)</title>
+          <g stroke="#2E464C" stroke-width="2">
+            <line x1="230" y1="62" x2="120" y2="140"/><line x1="230" y1="62" x2="340" y2="140"/>
+            <line x1="120" y1="140" x2="70" y2="230"/><line x1="120" y1="140" x2="170" y2="230"/>
+            <line x1="340" y1="140" x2="290" y2="230"/><line x1="340" y1="140" x2="390" y2="230"/>
+          </g>
+          <circle cx="230" cy="62" r="34" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <text x="230" y="67" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="600">Page</text>
+          <!-- client ring with server child inside (donut) -->
+          <circle cx="120" cy="140" r="38" fill="none" stroke="#02EFF0" stroke-width="10" filter="url(#glow)"/>
+          <circle cx="120" cy="140" r="24" fill="#153139" stroke="#2E464C"/>
+          <text x="120" y="144" text-anchor="middle" fill="#FFFFFF" font-size="10">server</text>
+          <circle cx="340" cy="140" r="34" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <text x="340" y="144" text-anchor="middle" fill="#FFFFFF" font-size="11">server</text>
+          <circle cx="70" cy="230" r="26" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <circle cx="170" cy="230" r="26" fill="none" stroke="#02EFF0" stroke-width="7"/>
+          <circle cx="290" cy="230" r="26" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <circle cx="390" cy="230" r="26" fill="none" stroke="#02EFF0" stroke-width="7"/>
+          <g font-size="12">
+            <circle cx="40" cy="285" r="7" fill="none" stroke="#02EFF0" stroke-width="4"/><text x="54" y="289" fill="#81F7F7">کلاینت ("use client")</text>
+            <circle cx="250" cy="285" r="7" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/><text x="264" y="289" fill="#C3C9CA">سرور (۰ کیلوبایت JS)</text>
+          </g>
+        </svg>
+      </figure>
+    </div>
+
+    <div class="reveal mt-12">
+      <p class="text-xs uppercase tracking-[.2em] text-storm-300 font-semibold">پرسش‌هایی که این بخش پاسخ می‌دهد</p>
+      <div class="mt-4 grid sm:grid-cols-2 gap-3">
+        <a href="#rx-01" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.1</span><span class="text-sm text-storm-100">چرا کپی کردن props درون state در هوک <code class="ic">useEffect</code> یک آنتی‌پترن مخرب است؟</span></a>
+        <a href="#rx-02" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.2</span><span class="text-sm text-storm-100">چرا افکت‌ها دو بار اجرا می‌شوند، و چگونه جلوی خطاهای Hydration Mismatch را بگیریم؟</span></a>
+        <a href="#rx-03" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.3</span><span class="text-sm text-storm-100">آیا یک کامپوننت کلاینت می‌تواند کامپوننت سرور را درون خود رندر کند؟ (الگوی دونات)</span></a>
+        <a href="#rx-04" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.4</span><span class="text-sm text-storm-100">هوک <code class="ic">useOptimistic</code> هنگام شکست عملیات در سرور چگونه تغییرات را بازمی‌گرداند؟</span></a>
+        <a href="#rx-05" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.5</span><span class="text-sm text-storm-100">چرا تابع <code class="ic">notFound()</code> در برخی شرایط ممکن است کد وضعیت HTTP 200 بازگرداند؟</span></a>
+        <a href="#rx-06" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.6</span><span class="text-sm text-storm-100">استفاده از <code class="ic">React.cache</code> یا <code class="ic">"use cache"</code>: کدام یک، و در چه سناریویی؟</span></a>
+        <a href="#rx-07" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.7</span><span class="text-sm text-storm-100">چرا فراخوانی <code class="ic">redirect()</code> درون بلوک <code class="ic">try/catch</code> با ارور مواجه می‌شود؟</span></a>
+        <a href="#rx-08" class="flex items-start gap-3 rounded-2xl bg-storm-900/70 border border-storm-600 p-4 hover:border-vivid-400 transition"><span class="chip-num">3.8</span><span class="text-sm text-storm-100">چرا احراز هویت هرگز نباید تنها در فایل <code class="ic">layout.tsx</code> انجام شود؟</span></a>
+      </div>
+    </div>
+  </div>
+</div>

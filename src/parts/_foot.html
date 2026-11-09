@@ -23,6 +23,18 @@
   /* ---------- icons ---------- */
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 
+  /* ---------- language switch with hash preservation ---------- */
+  var langSwitch = document.getElementById('lang-switch');
+  if (langSwitch) {
+    langSwitch.addEventListener('click', function (e) {
+      e.preventDefault();
+      var target = this.getAttribute('href');
+      var hash = window.location.hash || '';
+      try { localStorage.setItem('preferred-lang', target.indexOf('fa') !== -1 ? 'fa' : 'en'); } catch (err) {}
+      window.location.href = target + hash;
+    });
+  }
+
   /* ---------- code blocks: chrome, highlight, line numbers, marked lines, copy ---------- */
   var LANGS = { ts: 'typescript', tsx: 'typescript', js: 'javascript', cs: 'csharp', csharp: 'csharp', sql: 'sql', json: 'json', bash: 'bash', text: 'plaintext', http: 'plaintext' };
   function parseRanges(s) {

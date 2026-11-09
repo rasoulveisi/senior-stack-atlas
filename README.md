@@ -7,19 +7,21 @@ A visual guide to senior engineering interviews, built from three real productio
 - **Next Issue Tracker**: React 19, Next.js 16.4, React Compiler, Drizzle, PGlite
 
 The page has 29 chapters, a cross-stack comparison map and 58 interview answers. Every answer is visible on the page.
-It teaches with diagrams, charts, animated flows, real code and short B1–B2 English.
+It teaches with diagrams, charts, animated flows, real code and short B1–B2 English, with a complete Persian (RTL) version switchable at any time.
 
 ## Folder layout
 
 ```text
-index.html            the page (GitHub Pages serves this file)
-assets/site.css       compiled Tailwind CSS
+index.html            the English page (default entry for GitHub Pages)
+fa.html               the Persian (RTL) page
+assets/site.css       compiled Tailwind CSS (supports both LTR & RTL)
 favicon.svg           browser tab icon
 .nojekyll             tells GitHub Pages to serve the files as they are
-src/parts/            the source of the page, one file per part
-src/styles.css        Tailwind input: palette components and custom CSS
-src/build.py          joins src/parts into index.html
-tailwind.config.js    colours (storm, vivid, coral) and fonts
+src/parts/            the English source of the page, one file per part
+src/parts_fa/         the Persian (RTL) source of the page, one file per part
+src/styles.css        Tailwind input: palette components, RTL rules and custom CSS
+src/build.py          joins src/parts into index.html and src/parts_fa into fa.html
+tailwind.config.js    colours (storm, vivid, coral) and fonts (Lexend, Vazirmatn, JetBrains Mono)
 package.json          build scripts
 .agent-work/          build cards and audit reports from the first build (ignored by git)
 ```

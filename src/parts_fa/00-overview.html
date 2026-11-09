@@ -1,0 +1,222 @@
+
+<!-- ===================== HERO ===================== -->
+<div id="start" data-toc-group="شروع از اینجا">
+<section id="overview" data-toc="خوش‌آمدید" class="relative overflow-hidden brand-glow border-b border-storm-700/70">
+  <div class="absolute inset-0 grid-dots opacity-70" aria-hidden="true"></div>
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 pb-20 md:pt-24 md:pb-28 grid lg:grid-cols-[1.15fr_1fr] gap-12 items-center">
+    <div class="reveal">
+      <p class="inline-flex items-center gap-2 rounded-full border border-vivid-400/40 bg-storm-900/60 px-3.5 py-1.5 text-xs font-medium text-vivid-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-vivid-400"></span> راهنمای دیداری مصاحبه · ۳ پروژه واقعی پروداکشن
+      </p>
+      <h1 class="mt-6 text-5xl sm:text-6xl md:text-7xl font-semibold text-white leading-[1.08] tracking-tight">اطلس<br>استک <span class="text-transparent bg-clip-text bg-gradient-to-r from-vivid-300 to-vivid-100">سنیور</span></h1>
+      <p class="mt-6 text-lg md:text-xl font-light text-storm-100 max-w-xl leading-relaxed">یاد بگیرید مهندسان ارشد چگونه <mark class="hl">می‌اندیشند</mark>: چرا کدها به این شیوه نوشته می‌شوند، چه چیزهایی در محیط واقعی آسیب می‌بینند، و در مصاحبه شغلی دقیقاً چه باید بگویید. ابتدا با تصویر و نمودار، سپس با واژه‌ها.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#module-express" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 font-semibold px-5 py-3 hover:bg-vivid-300 transition"><i data-lucide="play" class="w-4 h-4"></i> آغاز یادگیری</a>
+        <a href="#matrix" class="inline-flex items-center gap-2 rounded-xl border border-storm-500 text-white font-medium px-5 py-3 hover:border-vivid-400 transition"><i data-lucide="git-compare-arrows" class="w-4 h-4"></i> یک مسئله، سه استک</a>
+      </div>
+    </div>
+
+    <figure class="reveal relative" aria-label="سه استک حول مسائل مهندسی مشترک">
+      <svg viewBox="0 0 520 470" class="w-full h-auto max-w-md mx-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+        <title>اکسپرس، دات‌نت و ری‌اکت حول مسائل بنیادی یکسانی گردش می‌کنند</title>
+        <circle cx="260" cy="235" r="200" fill="none" stroke="#1C3840" stroke-width="1.5" stroke-dasharray="4 8"/>
+        <circle cx="260" cy="235" r="135" fill="none" stroke="#2E464C" stroke-width="1.5"/>
+        <circle cx="260" cy="235" r="70" fill="none" stroke="#02EFF0" stroke-opacity=".25" stroke-width="1.5"/>
+        <g stroke="#02EFF0" stroke-opacity=".55" stroke-width="2">
+          <line x1="260" y1="235" x2="260" y2="60"/>
+          <line x1="260" y1="235" x2="98" y2="345"/>
+          <line x1="260" y1="235" x2="422" y2="345"/>
+        </g>
+        <circle cx="260" cy="235" r="58" fill="url(#g-orb)" filter="url(#glow)"/>
+        <text x="260" y="230" text-anchor="middle" fill="#0F282F" font-size="14" font-weight="700">مسائل</text>
+        <text x="260" y="249" text-anchor="middle" fill="#0F282F" font-size="14" font-weight="700">مشترک</text>
+        <!-- Express -->
+        <g>
+          <circle cx="260" cy="60" r="44" fill="#0F282F" stroke="#02EFF0" stroke-width="2"/>
+          <text x="260" y="56" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">Express 5</text>
+          <text x="260" y="75" text-anchor="middle" fill="#81F7F7" font-size="11">TypeScript</text>
+        </g>
+        <!-- .NET -->
+        <g>
+          <circle cx="98" cy="345" r="44" fill="#0F282F" stroke="#81F7F7" stroke-width="2"/>
+          <text x="98" y="341" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">.NET 10</text>
+          <text x="98" y="360" text-anchor="middle" fill="#81F7F7" font-size="11">C# · EF Core</text>
+        </g>
+        <!-- React -->
+        <g>
+          <circle cx="422" cy="345" r="44" fill="#0F282F" stroke="#C0FBFB" stroke-width="2"/>
+          <text x="422" y="341" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">React 19</text>
+          <text x="422" y="360" text-anchor="middle" fill="#81F7F7" font-size="11">Next.js 16</text>
+        </g>
+        <!-- orbiting pillars -->
+        <g font-size="11" fill="#A5AFB1">
+          <text x="110" y="150">خط لوله</text>
+          <text x="360" y="150">اعتبارسنجی</text>
+          <text x="60" y="250">تزریق DI</text>
+          <text x="430" y="250">کشینگ</text>
+          <text x="190" y="440">خطاها</text>
+          <text x="290" y="440">تست‌ها</text>
+        </g>
+        <g fill="#02EFF0">
+          <circle cx="160" cy="160" r="3.5"/><circle cx="360" cy="160" r="3.5"/><circle cx="76" cy="262" r="3.5"/>
+          <circle cx="436" cy="262" r="3.5"/><circle cx="224" cy="430" r="3.5"/><circle cx="296" cy="430" r="3.5"/>
+        </g>
+      </svg>
+    </figure>
+  </div>
+
+  <!-- stats -->
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-vivid-400">3</p><p class="mt-1 text-sm text-storm-200">پروژه واقعی پروداکشن</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-white">29</p><p class="mt-1 text-sm text-storm-200">فصل تصویری و تعاملی</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-white" data-count-qa>50+</p><p class="mt-1 text-sm text-storm-200">پاسخ مصاحبه، بدون پرده‌پوشی</p></div>
+      <div class="reveal rounded-2xl bg-storm-900/70 border border-storm-600 p-5 backdrop-blur"><p class="font-mono text-4xl font-semibold text-vivid-400">8</p><p class="mt-1 text-sm text-storm-200">ستون بنیادین مهندسی</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10">
+<!-- ===================== THE THREE CODEBASES ===================== -->
+<section id="codebases" data-toc="سه پروژه مبنا" class="py-16 space-y-8">
+  <div class="reveal">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">منبع مثال‌ها و سناریوهای واقعی</p>
+    <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">سه پروژه واقعی. کدهای واقعی. بدون مثال‌های ساختگی.</h2>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4">
+    <a href="#module-express" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-vivid-400 text-storm-900 grid place-items-center"><i data-lucide="activity" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 01</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">PhysioCoach AI</p>
+      <p class="mt-1 text-sm text-storm-300">یک وب‌سرویس مربی فیزیوتراپی با هوش مصنوعی که تحت هیچ شرایطی نباید تمرین ناامن تجویز کند.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">Express 5</span><span class="chip">TypeScript</span><span class="chip">Cloudflare Workers</span><span class="chip">Hyperdrive</span><span class="chip">Drizzle</span><span class="chip">Neon</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">ورود به این بخش <i data-lucide="arrow-left" class="w-4 h-4"></i></p>
+    </a>
+    <a href="#module-dotnet" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-vivid-200 text-storm-900 grid place-items-center"><i data-lucide="briefcase-business" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 02</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">Job Craft</p>
+      <p class="mt-1 text-sm text-storm-300">دستیار هوشمند جستجوی شغل که آگهی‌ها را پویش کرده و تطابق رزومه با فرصت شغلی را می‌سنجد.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">.NET 10</span><span class="chip">Minimal APIs</span><span class="chip">EF Core</span><span class="chip">pgvector</span><span class="chip">Channel&lt;T&gt;</span><span class="chip">Angular 20</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">ورود به این بخش <i data-lucide="arrow-left" class="w-4 h-4"></i></p>
+    </a>
+    <a href="#module-react" class="reveal group rounded-3xl border border-storm-600 bg-storm-900 p-6 hover:border-vivid-400 transition">
+      <div class="flex items-center justify-between"><span class="w-12 h-12 rounded-2xl bg-white text-storm-900 grid place-items-center"><i data-lucide="atom" class="w-6 h-6"></i></span><span class="font-mono text-xs text-storm-400">MODULE 03</span></div>
+      <p class="mt-5 text-xl font-semibold text-white">Next Issue Tracker</p>
+      <p class="mt-1 text-sm text-storm-300">یک سیستم رهگیری ایشوها به سبک مدرن، با تشریح مفاهیم برای توسعه‌دهندگان انگولار.</p>
+      <div class="mt-4 flex flex-wrap gap-1.5"><span class="chip">React 19</span><span class="chip">Next.js 16.4</span><span class="chip">React Compiler</span><span class="chip">Drizzle</span><span class="chip">PGlite</span></div>
+      <p class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-vivid-300 group-hover:gap-2.5 transition-all">ورود به این بخش <i data-lucide="arrow-left" class="w-4 h-4"></i></p>
+    </a>
+  </div>
+</section>
+
+<!-- ===================== VISUAL LANGUAGE ===================== -->
+<section id="how-to-read" data-toc="نحوه مطالعه این راهنما" class="py-16 border-t border-storm-700/60 space-y-8">
+  <div class="reveal">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">راهنمای نشانه‌ها</p>
+    <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">رنگ‌ها و شکل‌ها به شما می‌گویند چه چیزی اهمیت دارد.</h2>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی</p>
+      <p class="mt-2 text-sm text-storm-100">رنگ فیروزه‌ای یعنی: این مفهوم را در ذهن بسپارید.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-coral-300 font-semibold"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن</p>
+      <p class="mt-2 text-sm text-storm-100">رنگ مرجانی یعنی: این مسئله در محیط واقعی سرور را از کار می‌اندازد.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-white text-storm-900 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-700 font-semibold"><i data-lucide="sun" class="w-4 h-4"></i> در دنیای واقعی</p>
+      <p class="mt-2 text-sm font-medium">کارت‌های سفید مفاهیم فنی را با دنیای روزمره مقایسه می‌کنند.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه</p>
+      <p class="mt-2 text-sm text-storm-100">صورت سؤال و پاسخ کامل مهندس ارشد؛ هیچ‌چیز پنهان نشده است.</p>
+    </div>
+    <div class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.18em] text-white font-semibold"><i data-lucide="play" class="w-4 h-4 text-vivid-400"></i> اجرای مرحله‌ای</p>
+      <p class="mt-2 text-sm text-storm-100">جریان‌های اجرایی گام‌به‌گام روشن می‌شوند. دکمه پخش را بزنید تا مجدد تماشا کنید.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CROSS-STACK MATRIX ===================== -->
+<script>
+window.MATRIX = [
+  { short: 'معماری', icon: 'layout-grid', title: 'سبک معماری', question: 'کدهای هر قابلیت یا فیچر در کجای پروژه قرار می‌گیرند؟', stacks: [
+    { head: 'مستقیم و بدون واسطه', body: 'مسیرها مستقیماً سرویس‌ها را صدا زده و کوئری‌های Drizzle را اجرا می‌کنند. <strong class="text-white">بدون لایه‌های اضافه Repository</strong> که جوین‌ها را مخفی می‌کنند.' },
+    { head: 'برش‌های عمودی (Vertical Slices)', body: 'یک پوشه مجزا برای هر فیچر: <code class="ic">Endpoints.cs</code>، <code class="ic">Models.cs</code>، <code class="ic">Service.cs</code> به همراه قوانین ایستا در <code class="ic">Domain/</code>.' },
+    { head: 'پوشه‌های فیچر + DAL', body: 'صفحات App Router به همراه لایه دسترسی داده (DAL) اختصاصی برای هر قابلیت: <code class="ic">queries.ts</code>، <code class="ic">mutations.ts</code> و <code class="ic">actions.ts</code>.' } ] },
+  { short: 'خط لوله', icon: 'workflow', title: 'خط لوله درخواست (Pipeline)', question: 'یک درخواست پیش از رسیدن به کدهای شما از چه مراحلی عبور می‌کند؟', stacks: [
+    { head: 'آرایه ترتیبی', body: 'توابع میان‌افزار <code class="ic">(req, res, next)</code> دقیقاً به ترتیب اجرا می‌شوند. <strong class="text-white">ترتیب اجرا، همان معماری است.</strong>' },
+    { head: 'عروسک ماتریوشکا (تودرتو)', body: 'میان‌افزار <code class="ic">UseExceptionHandler</code> همه چیز را دربرمی‌گیرد، سپس CORS، احراز هویت، و در انتها اندپوینت‌ها.' },
+    { head: 'پراکسی ← چیدمان‌ها ← Suspense', body: 'فایل <code class="ic">proxy.ts</code>، سپس چیدمان‌های تو در تو، و در انتها مرزهای <code class="ic">&lt;Suspense&gt;</code> دور کامپوننت‌ها و اکشن‌های سرور.' } ] },
+  { short: 'تزریق DI', icon: 'plug', title: 'تزریق وابستگی (DI)', question: 'کدها چگونه به نمونه دیتابیس و سرویس‌ها دسترسی پیدا می‌کنند؟', stacks: [
+    { head: 'نمونه‌سازی تنبل در هر درخواست', body: 'فراخوانی <code class="ic">c.get(\'db\')</code> روی <code class="ic">ExpressRouteContext</code> سفارشی تنها هنگامی کلاینت را می‌سازد که روت به آن نیاز داشته باشد.' },
+    { head: 'کانتینر درونی فریم‌ورک', body: 'طول‌عمرهای <code class="ic">Singleton</code>، <code class="ic">Scoped</code>، <code class="ic">Transient</code> و استفاده از <code class="ic">IServiceScopeFactory</code> برای کارهای پس‌زمینه.' },
+    { head: 'مرزهای ماژول و ایزولاسیون', body: 'دایرکتیو <code class="ic">import "server-only"</code> کد سرور را از مرورگر دور نگه می‌دارد. تابع <code class="ic">React.cache()</code> یک مقدار را درون طول عمر یک درخواست به اشتراک می‌گذارد.' } ] },
+  { short: 'اعتبارسنجی', icon: 'shield-check', title: 'اعتبارسنجی و امنیت ورودی', question: 'ورودی‌های نامعتبر یا غیرقابل اعتماد چگونه متوقف می‌شوند؟', stacks: [
+    { head: 'دروازه بدون اعتماد (Zero-trust)', body: 'اسکیماهای Zod با متد <code class="ic">.strict()</code> در مرز ورودی روت، فیلدهای ناشناس را با خطای <code class="ic">400</code> فوراً ریجکت می‌کنند.' },
+    { head: 'رکوردهای تغییرناپذیر + گاردها', body: 'اعتبارسنجی DTO‌های از نوع Record به همراه گاردهای ایستا و کاملاً خالص در دامنه سی‌شارپ.' },
+    { head: 'اعتبارسنجی تک‌تک اکشن‌ها', body: 'اجرای <code class="ic">safeParse</code> با Zod در Server Actionها، <strong class="text-white">حتی برای آرگومان‌های بایندشده</strong>، به همراه بررسی سطح دسترسی کاربر (Actor) در DAL.' } ] },
+  { short: 'دیتابیس', icon: 'database-zap', title: 'کارایی و پرفورمنس پایگاه داده', question: 'دیتابیس چگونه همواره سریع و سبک پاسخ می‌دهد؟', stacks: [
+    { head: 'استخر اتصال در لبه شبکه', body: 'ترکیب Cloudflare Hyperdrive با درایور <code class="ic">postgres.js</code> و اعمال تنظیمات <code class="ic">prepare: false</code> و <code class="ic">fetch_types: false</code>.' },
+    { head: 'استخر گرم و خواندن موازی', body: 'گرم نگه داشتن <code class="ic">NpgsqlDataSource</code> با <code class="ic">MinPoolSize = 8</code>، استفاده از <code class="ic">AsNoTracking()</code>، و کوئری‌های موازی با <code class="ic">IDbContextFactory</code>.' },
+    { head: 'کش مشترک، مجوز اختصاصی', body: 'کوئری‌های اشتراکی با دایرکتیو <code class="ic">"use cache"</code>، تفکیک دسترسی هر کاربر خارج از کش، و باطل‌سازی آنی با <code class="ic">updateTag()</code> هنگام نوشتن.' } ] },
+  { short: 'مدیریت خطا', icon: 'file-warning', title: 'قرارداد ساختار خطا', question: 'هنگام بروز خطا، کلاینت چه ساختاری دریافت می‌کند؟', stacks: [
+    { head: 'مدیریت خطای استاندارد RFC 7807', body: 'میان‌افزار ۴ آرگومانی <code class="ic">errorHandler</code> که خروجی استاندارد <code class="ic">application/problem+json</code> بازمی‌گرداند.' },
+    { head: 'ProblemDetails استاندارد', body: 'ترکیب <code class="ic">AddProblemDetails()</code> و <code class="ic">Results.Problem()</code> برای تولید جیسون استاندارد RFC 7807.' },
+    { head: 'مقادیر خطا + مرزهای محدود', body: 'خطاهای پیش‌بینی‌شده به عنوان مقادیر <code class="ic">FormState</code> بازمی‌گردند. کرش‌ها درون جعبه <code class="ic">SectionError</code> مهار می‌شوند.' } ] },
+  { short: 'هوش مصنوعی', icon: 'bot', title: 'تاب‌آوری در برابر مدل هوش مصنوعی', question: 'هنگامی که مدل هوش مصنوعی کند است یا خروجی غلط تولید می‌کند چه رخ می‌دهد؟', stacks: [
+    { head: 'حصارکشی پیرامون مدل', body: 'فیلتر اولیه کاندیداهای امن، مدل جایگزین هنگام بروز وقفه (Timeout)، اعتبارسنجی بالینی قطعی، و لاگ‌های حسابرسی حساب‌شده.' },
+    { head: 'اول قوانین، سپس هوش مصنوعی', body: 'استفاده از <code class="ic">IHttpClientFactory</code>، تایم‌اوت ۲۵ ثانیه‌ای، حذف امبدینگ‌های تکراری با هش SHA-256 و فال‌بک قطعی سی‌شارپ.' },
+    { head: 'رابط کاربری خوش‌بینانه (Optimistic)', body: 'هوک <code class="ic">useOptimistic</code> نتیجه را بی‌درنگ نمایش می‌دهد و در صورت شکست درخواست، <strong class="text-white">به طور خودکار تغییرات را بازمی‌گرداند</strong>.' } ] },
+  { short: 'تست‌نویسی', icon: 'flask-conical', title: 'تست‌های یکپارچگی (Integration)', question: 'سامانه واقعی چگونه بدون ماک کردن بیهوده دنیای خارج تست می‌شود؟', stacks: [
+    { head: 'پل تست با پورت پویا', body: 'دستور <code class="ic">server.listen(0, \'127.0.0.1\')</code> به هر تست یک پورت آزاد و ایزوله می‌دهد، به همراه یک پل <code class="ic">.fetch()</code> سریع.' },
+    { head: 'خط لوله واقعی تست', body: 'کلاس <code class="ic">WebApplicationFactory&lt;Program&gt;</code> همراه با یک برنچ ایزوله تست دیتابیس در Neon و تزریق خطای شبیه‌سازی‌شده <code class="ic">ThrowingAiClient</code>.' },
+    { head: 'دیتابیس واقعی در وب‌اسمبلی', body: 'به‌کارگیری PGlite برای تست‌های دیتابیس و اکشن‌ها، و اجرای تست‌های Playwright روی خروجی <code class="ic">next build &amp;&amp; next start</code>.' } ] }
+];
+</script>
+
+<section id="matrix" data-toc="یک مسئله، سه استک" class="py-16 border-t border-storm-700/60 space-y-8">
+  <div class="reveal grid md:grid-cols-[1fr_auto] gap-6 items-end">
+    <div>
+      <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">نقشه مهندسی فرامعماری</p>
+      <h2 class="mt-3 text-3xl md:text-4xl font-semibold text-white">یک مسئله، سه استک فناوری</h2>
+      <p class="mt-3 text-storm-200 max-w-2xl">مهندسان ارشد این هشت مسئله بنیادین را در هر استکی مشاهده می‌کنند. یک ستون را برگزینید و پاسخ‌های هر پلتفرم را کنار یکدیگر بسنجید.</p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-storm-300"><i data-lucide="mouse-pointer-click" class="w-4 h-4 text-vivid-400"></i> روی هر ستون کلیک کنید</div>
+  </div>
+
+  <div id="matrix-app" class="reveal rounded-3xl border border-storm-700 bg-storm-900/80 p-4 md:p-6">
+    <div data-matrix-tabs role="tablist" class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1"></div>
+    <div data-matrix-panel class="mt-5">
+      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h3 data-pillar-title class="text-2xl md:text-3xl font-semibold text-white"></h3>
+        <p data-pillar-q class="text-storm-300"></p>
+      </div>
+      <div class="mt-5 grid md:grid-cols-3 gap-4">
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-vivid-400"><i data-lucide="zap" class="w-4 h-4"></i> Express 5</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-vivid-200"><i data-lucide="layers" class="w-4 h-4"></i> .NET 10</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+        <div data-stack class="reveal rounded-2xl bg-storm-800 border border-storm-600 p-5">
+          <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-white"><i data-lucide="atom" class="w-4 h-4"></i> React + Next</p>
+          <p data-stack-head class="mt-3 text-lg font-semibold text-white"></p>
+          <p data-stack-body class="mt-2 text-sm text-storm-200 leading-relaxed"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+    <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی</p>
+    <p class="mt-2 text-lg md:text-xl text-white font-medium">در مصاحبه طراحی سیستم، همیشه ابتدا <em>مسئله</em> را نام ببرید، سپس ابزار را. عبارت «ما به یک مرز خطاناپذیر با رویکرد Fail-closed نیاز داشتیم، بنابراین از... استفاده کردیم» تفکر یک مهندس ارشد را نشان می‌دهد. صرفاً گفتن «ما از Zod استفاده کردیم» سطح درک معماری را نشان نمی‌دهد.</p>
+  </div>
+</section>
+</div>
+</div>

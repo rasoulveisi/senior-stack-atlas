@@ -1,0 +1,961 @@
+<section id="rx-01" data-toc="۳.۱ رندرینگ و وضعیت" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.1</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">توابع · اسنپ‌شات‌ها · رندر خالص · کلیدها</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">رندرینگ و وضعیت (State)</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">یک کامپوننت ری‌اکت یک نمونه زنده از یک کلاس نیست؛ بلکه یک <mark class="hl">فراخوانی تابع خالص</mark> است که props و state فعلی را به رابط کاربری (UI) تبدیل می‌کند.</p>
+  </header>
+
+  <div class="reveal rounded-3xl border border-vivid-400/40 bg-storm-900 p-6 md:p-8 text-center">
+    <p class="text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold">فرمول بنیادین</p>
+    <p class="mt-3 font-mono text-3xl sm:text-4xl md:text-5xl font-semibold text-vivid-400 tracking-tight">UI = f(props, state)</p>
+    <p class="mt-3 text-sm md:text-base text-storm-200 max-w-2xl mx-auto">با هر بار تغییر state، ری‌اکت تابع شما را از بالا تا پایین مجدداً اجرا می‌کند.</p>
+  </div>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="camera" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">تصویر دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">یک کامپوننت ری‌اکت شبیه باجه عکاسی فوری است؛ با هر تغییر، عکسی کاملاً جدید چاپ می‌کند، نه اینکه روی عکس قبلی با خودکار نقاشی بکشد.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">یک فراخوانی تابع، نه یک نمونه کلاس</h4>
+    <p class="text-storm-200 max-w-3xl">متغیرهای محلی تعریف‌شده با <code class="ic">const</code> یا <code class="ic">let</code> در هر بار رندر از نو ساخته می‌شوند. هندلرهای رویداد، مقادیر <code class="ic">props</code> و <code class="ic">state</code> مربوط به همان رندر به‌خصوص را در حافظه کلوژر خود نگه‌می‌دارند (Capture می‌کنند).</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> عادت انگولار: نمونه کلاس</p>
+        <p class="mt-3 text-storm-200">انگولار یک بار <code class="ic">new MyComponent()</code> را صدا می‌زند، متغیر <code class="ic">this.someProperty</code> را در طول زمان جهش می‌دهد (Mutate می‌کند)، و هنگام انتشار سیگنال‌ها یا رویدادهای زون، تمپلیت را بررسی می‌نماید.</p>
+        <p class="mt-3 text-sm font-mono text-coral-300">← یک شیء تغییرپذیر در کل طول عمر کامپوننت باقی می‌ماند</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شیوه ری‌اکت: اسنپ‌شات تابع</p>
+        <p class="mt-3 text-storm-200">ری‌اکت با هر تغییر state، تابع شما را از نو اجرا می‌کند. متغیرهای محلی تازه هستند و پس از بازگشت تابع ناپدید می‌شوند.</p>
+        <p class="mt-3 text-sm font-mono text-vivid-300">← هندلرها دقیقاً مقادیر همان رندر را ثبت و ضبط می‌کنند</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>سه رندر به عنوان سه اسنپ‌شات مجزا، هر کدام با مقادیر const و کلوژر مختص به خود</title>
+          <rect x="12" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="112" y="55" text-anchor="middle" fill="#81F7F7" font-size="14" font-weight="600">اسنپ‌شات رندر ۱</text>
+          <text x="30" y="88" fill="#FFFFFF" font-size="13">const count = 0;</text>
+          <text x="30" y="114" fill="#FFFFFF" font-size="13">const text = "0 items";</text>
+          <rect x="26" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="112" y="157" text-anchor="middle" fill="#879497" font-size="13">onClick مقدار count=0 را می‌گیرد</text>
+
+          <line x1="212" y1="108" x2="254" y2="108" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="233" y="96" text-anchor="middle" fill="#02EFF0" font-size="13">set(1)</text>
+
+          <rect x="260" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="360" y="55" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">اسنپ‌شات رندر ۲</text>
+          <text x="278" y="88" fill="#FFFFFF" font-size="13">const count = 1;</text>
+          <text x="278" y="114" fill="#FFFFFF" font-size="13">const text = "1 item";</text>
+          <rect x="274" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="360" y="157" text-anchor="middle" fill="#81F7F7" font-size="13">onClick مقدار count=1 را می‌گیرد</text>
+
+          <line x1="460" y1="108" x2="502" y2="108" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <text x="481" y="96" text-anchor="middle" fill="#02EFF0" font-size="13">set(2)</text>
+
+          <rect x="508" y="25" width="200" height="165" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="608" y="55" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">اسنپ‌شات رندر ۳</text>
+          <text x="526" y="88" fill="#FFFFFF" font-size="13">const count = 2;</text>
+          <text x="526" y="114" fill="#FFFFFF" font-size="13">const text = "2 items";</text>
+          <rect x="522" y="132" width="172" height="40" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="608" y="157" text-anchor="middle" fill="#81F7F7" font-size="13">onClick مقدار count=2 را می‌گیرد</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">هر رندر مقادیر <code class="ic">const</code> مستقل و تازه خود را خلق می‌کند. هیچ مقداری در طول رندرهای پیاپی در جای قبلی تغییر (Mutate) نمی‌کند.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">وضعیت (State) تغییرناپذیر است و با Object.is مقایسه می‌شود</h4>
+    <p class="text-storm-200 max-w-3xl">ری‌اکت تغییر وضعیت را با مقایسه رفرنس‌های قدیمی و جدید از طریق <code class="ic">Object.is(oldState, newState)</code> تشخیص می‌دهد.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن · عادت آسیب‌رسان در انگولار</p>
+      <p class="mt-2 text-white font-semibold"><code class="ic">toasts.push(newItem); setToasts(toasts)</code></p>
+      <p class="mt-1 text-sm text-storm-200">رفرنس آرایه تغییر نکرده است، بنابراین <code class="ic">Object.is(oldArray, newArray) === true</code> خواهد بود. ری‌اکت می‌پندارد چیزی تغییر نکرده و از رندر مجدد صرف‌نظر می‌کند.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/toast/toast-provider.tsx" data-lang="ts" data-hl="5"><code>const [toasts, setToasts] = useState&lt;ToastItem[]&gt;([]);
+
+const toast = useCallback&lt;ShowToast&gt;((message, tone = "success") =&gt; {
+  const id = nextId.current++;
+  setToasts((current) =&gt; [...current, { id, message, tone }]);
+}, []);</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">[...current, { id, message, tone }]</code> آرایه جدیدی تخصیص می‌دهد تا <code class="ic">Object.is</code> یک رفرنس تازه را تشخیص دهد.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">الگوی <code class="ic">current =&gt; ...</code> آخرین آرایه موجود در صف به‌روزرسانی را می‌خواند، نه یک کلوژر کهنه و بیات‌شده را.</span></li>
+      </ul>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">هنگامی که دو رویداد در یک تیک زمانی یکسان رخ می‌دهند، ساختار <code class="ic">setToasts(current =&gt; ...)</code> تضمین می‌کند که آپدیت دوم حتماً به انتهای آرایه حاصل از آپدیت اول ملحق شود.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">مقادیر مشتق‌شده: محاسبه مستقیم در حین رندر</h4>
+    <p class="text-storm-200 max-w-3xl">هنگامی که مقداری از props یا state به دست می‌آید، آن را مستقیماً درون بدنه تابع محاسبه کنید. آن را در <code class="ic">useState</code> یا <code class="ic">useEffect</code> قرار ندهید.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/issue-filters.tsx" data-lang="ts" data-hl="2"><code>// Derived value: computed while rendering, from props. Not state, not an Effect.
+const hasFilters = Boolean(search.q || search.status || search.assignee);</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">hasFilters</code> در هر بار رندر مجدداً محاسبه می‌شود و هرگز هماهنگی خود را با <code class="ic">search</code> از دست نمی‌دهد.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> عادت انگولار: <code class="ic">computed()</code></p>
+        <p class="mt-3 text-storm-200">در انگولار، نمونه کلاس فقط یک بار اجرا می‌شود، بنابراین شما وضعیت مشتق‌شده را درون <code class="ic">computed(() =&gt; ...)</code> قرار می‌دهید تا تغییرات سیگنال‌ها رصد شود.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شیوه ری‌اکت: یک <code class="ic">const</code> ساده</p>
+        <p class="mt-3 text-storm-200">تابع کامپوننت شما از قبل با هر رندر دوباره اجرا می‌شود. یک متغیر ساده <code class="ic">const</code> بسیار پرسرعت است و به هیچ رپری نیاز ندارد.</p>
+      </div>
+    </div>
+
+    <div class="reveal rounded-2xl bg-storm-800/80 border-r-4 border-vivid-400 p-5 md:p-6">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="sparkles" class="w-4 h-4"></i> نکته کلیدی · کامپایلر ری‌اکت (React Compiler)</p>
+      <p class="mt-2 text-lg md:text-xl text-white font-medium">پروژه Next Issue Tracker گزینه <code class="ic">reactCompiler: true</code> را در فایل <code class="ic">next.config.ts</code> فعال ساخته است (<code class="ic">docs/adr/0003-react-compiler.md</code>). در زمان بیلد، کامپایلر مقادیر مشتق‌شده و گره‌های JSX را به‌طور خودکار کش (Memoize) می‌کند، بدون آنکه نیازی به نوشتن دستی <code class="ic">useMemo</code>، <code class="ic">useCallback</code> یا <code class="ic">React.memo</code> باشد.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">قانون رندر خالص (Pure Render Rule)</h4>
+    <p class="text-storm-200 max-w-3xl">ری‌اکت و کامپایلر ری‌اکت می‌توانند کامپوننت شما را چندین بار فراخوانی کرده یا خروجی آن را کش کنند. رندر حتماً باید خالص باقی بماند.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="ban" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">متغیرهای بیرونی را تغییر ندهید</p>
+        <p class="mt-1 text-sm text-storm-300">در زمان رندر، هرگز متغیرهای خارج از تابع کامپوننت را تغییر (Mutate) ندهید.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="clock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">توابع ناخالص را در رندر صدا نزنید</p>
+        <p class="mt-1 text-sm text-storm-300">هرگز توابعی مانند <code class="ic">Date.now()</code>، <code class="ic">new Date()</code> یا <code class="ic">Math.random()</code> را حین رندر یا در ردیوسر وضعیت فراخوانی نکنید.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="circle-check" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">کارهای ناخالص را به هندلرها بسپارید</p>
+        <p class="mt-1 text-sm text-storm-300">هندلرهای رویداد نظیر <code class="ic">submit</code> بخشی از مرحله رندر نیستند؛ آن‌ها می‌توانند با خیال راحت <code class="ic">new Date()</code> را فراخوانی کرده و مقدار حاصل را به داخل بفرستند.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/comments/components/comment-thread.tsx" data-lang="ts" data-hl="9,19"><code>const [visible, addOptimistic] = useOptimistic&lt;CommentView[], OptimisticComment&gt;(
+  comments,
+  (current, { body, at }) =&gt; [
+    ...current,
+    {
+      id: `pending-${current.length}`,
+      body,
+      author: { id: "me", name: currentUserName },
+      createdAt: at, // Uses `at` passed in, NOT `new Date()` inside the reducer!
+      updatedAt: at,
+      viewerCan: { edit: false, delete: false },
+      pending: true,
+    },
+  ],
+);
+
+function submit(formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  if (body) addOptimistic({ body, at: new Date() });
+  return dispatch(formData);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">تابع <code class="ic">submit()</code> یک هندلر رویداد است، بنابراین ساختن <code class="ic">new Date()</code> در آن کاملاً ایمن است.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">ردیوسر هوک <code class="ic">useOptimistic</code> در حین رندر اجرا می‌شود و با خواندن آرگومان پاس‌داده‌شده <code class="ic">at</code>، خلوص خود را حفظ می‌نماید.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">همگام‌سازی وضعیت با تغییر Props: کلید در برابر setState در زمان رندر</h4>
+    <p class="text-storm-200 max-w-3xl">به‌جای چرخه حیات <code class="ic">ngOnChanges</code> در انگولار، ری‌اکت دو الگو در اختیارتان می‌گذارد: تغییر مقدار <code class="ic">key</code> برای ریست کامل کامپوننت، یا صدا زدن <code class="ic">setState</code> در حین رندر برای اصلاح فیلدهای به‌خصوص.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> عادت انگولار: <code class="ic">ngOnChanges</code></p>
+        <p class="mt-3 text-storm-200">منتظر هوک چرخه حیات <code class="ic">@Input()</code> ماندن و رونویسی دستی فیلدهای داخلی روی نمونه کلاس موجود.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شیوه ری‌اکت: <code class="ic">key</code> یا گارد رندر</p>
+        <p class="mt-3 text-storm-200">ارسال یک <code class="ic">key</code> جدید برای ریمونت یک نمونه پاک، یا به‌روزرسانی state درون یک گارد شرطی <code class="ic">if (prop !== seenProp)</code> حین رندر.</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">الگوی الف · چرا فرم <code class="ic">IssueForm</code> با ویژگی <code class="ic">&lt;Activity&gt;</code> در Next.js 16 به <code class="ic">key</code> نیاز دارد</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">مونت کنترل‌نشده</p>
+          <p class="text-xs text-storm-300"><code class="ic">IssueForm</code> مقدار <code class="ic">defaultValue={v.title}</code> را تنها در اولین مونت ست می‌کند.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">مخفی‌سازی با <code class="ic">&lt;Activity&gt;</code></p>
+          <p class="text-xs text-storm-300">نسخه ۱۶ فریم‌ورک Next.js صفحات بازدیدشده را در DOM نگه می‌دارد تا بازگشت آنی باشد.</p>
+        </div>
+        <div class="self-center text-coral-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">03 · بدون کلید</p>
+          <p class="font-semibold text-white">ورودی DOM بیات</p>
+          <p class="text-xs text-storm-300">باز کردن مجدد فرم ویرایش، همان <code class="ic">IssueForm</code> قبلی با مقادیر متنی کهنه را نمایان می‌سازد.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">04 · همراه با کلید</p>
+          <p class="font-semibold text-white">ریمونت تازه</p>
+          <p class="text-xs text-storm-300">کلید جدید در <code class="ic">updatedAt</code> فرم کهنه را از بین برده و یک فرم تازه را مونت می‌نماید.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/app/(app)/projects/[projectKey]/issues/[number]/edit/page.tsx" data-lang="ts" data-hl="2"><code>&lt;IssueForm
+  key={issue.updatedAt.toISOString()}
+  action={updateIssueAction.bind(null, issue.id)}
+  defaults={{
+    title: issue.title,
+    // ...
+  }}
+/&gt;</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">هنگامی که ایشیو ذخیره‌شده برچسب زمانی تازه‌ای در <code class="ic">updatedAt</code> دریافت می‌کند، ری‌اکت فرم <code class="ic">IssueForm</code> قبلی را آنمونت کرده و یک نمونه تازه با <code class="ic">defaultValue</code>های جدید مونت می‌کند.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/search-box.tsx" data-lang="ts" data-hl="5-11"><code>const [value, setValue] = useState(defaultValue);
+const [sent, setSent] = useState(defaultValue);
+const [seenUrlValue, setSeenUrlValue] = useState(defaultValue);
+
+if (defaultValue !== seenUrlValue) {
+  setSeenUrlValue(defaultValue);
+  if (defaultValue !== sent) {
+    setValue(defaultValue);
+    setSent(defaultValue);
+  }
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">الگوی ب کامپوننت <code class="ic">SearchBox</code> را مونت نگه می‌دارد تا کاربر در حین تایپ کردن هرگز فوکوس ورودی را از دست ندهد.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">هنگامی که ناوبری بیرونی (مانند دکمه پاکسازی فیلترها یا بازگشت مرورگر) مقدار <code class="ic">defaultValue</code> را تغییر می‌دهد، ری‌اکت مقدار <code class="ic">value</code> را حین رندر و پیش از ترسیم روی صفحه (Paint) به‌روزرسانی می‌کند.</span></li>
+      </ul>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>خط زمانی مقایسه همگام‌سازی وضعیت در useEffect (دو بار ترسیم با پرش تصویر) در برابر setState در زمان رندر (یک ترسیم تمیز و بدون پرش)</title>
+          <text x="16" y="34" fill="#FF7A6B" font-size="14" font-weight="600">آنتی‌پترن: فراخوانی setState درون useEffect (۲ بار رندر و پرش بصری تصویر)</text>
+          <rect x="16" y="48" width="150" height="54" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="91" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۱. رندر کهنه</text>
+          <text x="91" y="91" text-anchor="middle" fill="#879497" font-size="13">مقدار قدیمی در JSX</text>
+          <line x1="166" y1="75" x2="196" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="204" y="48" width="160" height="54" rx="12" fill="#153139" stroke="#FF7A6B"/>
+          <text x="284" y="72" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">۲. ترسیم DOM کهنه</text>
+          <text x="284" y="91" text-anchor="middle" fill="#879497" font-size="13">کاربر متن قدیمی را می‌بیند</text>
+          <line x1="364" y1="75" x2="394" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="402" y="48" width="140" height="54" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="472" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۳. اجرای useEffect</text>
+          <text x="472" y="91" text-anchor="middle" fill="#879497" font-size="13">فراخوانی setValue()</text>
+          <line x1="542" y1="75" x2="572" y2="75" stroke="#FF7A6B" stroke-width="2" marker-end="url(#arw-coral)"/>
+          <rect x="580" y="48" width="144" height="54" rx="12" fill="#153139" stroke="#2E464C"/>
+          <text x="652" y="72" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۴. رندر دوم</text>
+          <text x="652" y="91" text-anchor="middle" fill="#879497" font-size="13">ترسیم برای بار دوم</text>
+
+          <text x="16" y="142" fill="#02EFF0" font-size="14" font-weight="600">الگوی ب: فراخوانی setState در حین رندر (۱ ترسیم، بدون کمترین پرش)</text>
+          <rect x="16" y="156" width="195" height="54" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="113" y="180" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۱. مشاهده prop جدید در رندر</text>
+          <text x="113" y="199" text-anchor="middle" fill="#81F7F7" font-size="13">فراخوانی setSeenUrlValue()</text>
+          <line x1="211" y1="183" x2="251" y2="183" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <rect x="259" y="156" width="215" height="54" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="366" y="180" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">۲. دور ریختن JSX و اجرای مجدد</text>
+          <text x="366" y="199" text-anchor="middle" fill="#879497" font-size="13">پیش از دست زدن به DOM</text>
+          <line x1="474" y1="183" x2="514" y2="183" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+          <rect x="522" y="156" width="202" height="54" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="623" y="180" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">۳. یک‌بار ترسیم واحد در DOM</text>
+          <text x="623" y="199" text-anchor="middle" fill="#81F7F7" font-size="13">رابط کاربری تازه در اولین ترسیم</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">فراخوانی <code class="ic">setState</code> درون یک شرط رندر باعث می‌شود ری‌اکت بلافاصله پردازش کهنه را دور بیندازد و تنها یک بار در DOM ترسیم کند. ری‌اکت کامپوننت <code class="ic">SearchBox</code> را پیش از رندر فرزندانش دوباره اجرا می‌کند، بنابراین خطای <code class="ic">ExpressionChangedAfterItHasBeenCheckedError</code> رخ نمی‌دهد و هیچ پرش متنی کهنه‌ای وجود نخواهد داشت.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پرسش‌های مصاحبه سنیور</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">چرا کپی کردن props درون state در هوک <code class="ic">useEffect</code> یک آنتی‌پترن مخرب است، و سه رویکرد اصولی برای مدیریت داده‌های حاصل از props کدامند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">علت آسیب:</strong> فراخوانی <code class="ic">setState(prop)</code> درون <code class="ic">useEffect</code> باعث می‌شود ری‌اکت ابتدا یک چرخه کامل رندر و ترسیم (Paint) را با وضعیت قدیمی به پایان برساند، و سپس بلافاصله یک رندر دوم را آغاز کند که منجر به افت عملکرد و پرش بصری می‌شود.</p>
+        <p><strong class="text-vivid-300">۱. محاسبه حین رندر:</strong> اگر مقدار از props یا state محاسبه می‌شود، آن را به‌عنوان یک متغیر ساده درون بدنه تابع محاسبه کنید (مانند <code class="ic">hasFilters</code> در <code class="ic">IssueFilters</code>).</p>
+        <p><strong class="text-vivid-300">۲. ریست کردن کل state با کلید <code class="ic">key</code>:</strong> هر زمان که یک شناسه یا شماره نسخه تغییر کرد و شما یک نقطه شروع کاملاً پاک می‌خواهید، یک <code class="ic">key</code> جدید بفرستید. کامپوننت <code class="ic">IssueForm</code> از <code class="ic">key={issue.updatedAt.toISOString()}</code> استفاده می‌کند.</p>
+        <p><strong class="text-vivid-300">۳. اصلاح state خاص در حین رندر:</strong> برای به‌روزرسانی تنها برخی فیلدها ضمن حفظ فوکوس درون <code class="ic">SearchBox</code>، کامپوننت را در حالت مونت نگه دارید. <code class="ic">setState</code> را مستقیماً حین رندر درون شرط <code class="ic">if (prop !== prevProp)</code> صدا بزنید.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">با فعال بودن کامپایلر جدید ری‌اکت (React Compiler)، آیا هنوز هم باید نگران تغییرناپذیری (Immutability) یا رندر خالص باشیم؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">بله، حتی بسیار جدی‌تر از گذشته.</strong> کامپایلر ری‌اکت مقادیر و بلوک‌های JSX را بر مبنای برابری رفرنس‌ها (<code class="ic">Object.is</code>) به‌صورت خودکار مموایز می‌کند و این فرض قطعی را دارد که تابع رندر شما کاملاً بدون ساید افکت است.</p>
+        <p>هرگز یک آرایه را در محل تغییر ندهید و توابع ناخالص مانند <code class="ic">new Date()</code> را حین رندر صدا نزنید. در غیر این صورت، کامپایلر ممکن است از محاسبه مجدد یک بلوک صرف‌نظر کرده و رابط کاربری کهنه و غلط روی صفحه باقی بماند.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-02" data-toc="۳.۲ افکت‌ها و سیستم‌های خارجی" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.2</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">useEffect · useEffectEvent · Refs · هایدریشن</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">افکت‌ها و سیستم‌های خارجی</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">یک افکت تنها و تنها برای <mark class="hl">همگام‌سازی با یک سیستم خارجی</mark> است؛ مانند لیسنرهای DOM، تایمرها، اتصالات وب‌سوکت یا ویجت‌های غیر ری‌اکتی.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="plug" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">تصویر دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">هوک <code class="ic">useEffect</code> درست مثل تبدیل دوشاخه برق در سفر است. شما فقط در مرز اتصال میان دستگاه خود و پریز برق بیگانه روی دیوار به آن احتیاج پیدا می‌کنید.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">قانون طلایی useEffect</h4>
+    <p class="text-storm-200 max-w-3xl">اگر پای هیچ سیستم خارجی در میان نیست، به هیچ عنوان به <code class="ic">useEffect</code> نیازی ندارید.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> عادت انگولار: <code class="ic">effect()</code> / <code class="ic">ngOnInit</code></p>
+        <p class="mt-3 text-storm-200">استفاده از <code class="ic">effect()</code> یا <code class="ic">ngOnInit</code> برای واکنش به تغییرات وضعیت یا محاسبه فیلدهای مشتق‌شده در کامپوننت.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شیوه ری‌اکت: فقط همگام‌سازی مرزی</p>
+        <p class="mt-3 text-storm-200">هوک <code class="ic">useEffect</code> را منحصراً برای لیسنرهای DOM مرورگر، <code class="ic">setTimeout</code>/<code class="ic">setInterval</code>، وب‌سوکت‌ها یا ویجت‌های غیر ری‌اکتی نگه دارید.</p>
+      </div>
+    </div>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">فلوچارت تصمیم‌گیری · آیا به <code class="ic">useEffect</code> نیاز دارم؟</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col md:flex-row md:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01 · بررسی</p>
+          <p class="font-semibold text-white">آیا سیستم خارجی وجود دارد؟</p>
+          <p class="text-xs text-storm-300">لیسنر DOM، تایمر، وب‌سوکت، یا ویجت غیر ری‌اکتی؟</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">02 · اگر خیر</p>
+          <p class="font-semibold text-white">درون ری‌اکت بمانید</p>
+          <p class="text-xs text-storm-300">در زمان رندر محاسبه کنید (<code class="ic">const</code>) یا در هندلر رویداد اجرا نمایید.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 md:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03 · اگر بله</p>
+          <p class="font-semibold text-white">از <code class="ic">useEffect</code> + پاکسازی بهره ببرید</p>
+          <p class="text-xs text-storm-300">در زمان setup سابسکرایب کنید و در تابع پاکسازی (cleanup) لغو اشتراک نمایید.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">اشتراک در رویدادهای DOM با useEffectEvent</h4>
+    <p class="text-storm-200 max-w-3xl">فراخواننده‌ها یک تابع ناشناس (Arrow Function) مانند <code class="ic">useHotkey("/", (e) =&gt; { ... })</code> ارسال می‌کنند که در هر بار رندر رفرنس جدیدی ایجاد می‌کند. هوک <code class="ic">useEffectEvent</code> (در ری‌اکت ۱۹.۲+) همیشه آخرین نسخه <code class="ic">handler</code> را بدون لزوم ثبت مجدد لیسنر DOM می‌خواند.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/hooks/use-hotkey.ts" data-lang="ts" data-hl="5,13-15"><code>export function useHotkey(
+  key: string,
+  handler: (event: KeyboardEvent) =&gt; void,
+) {
+  const onKey = useEffectEvent(handler);
+
+  useEffect(() =&gt; {
+    function listener(event: KeyboardEvent) {
+      if (event.key !== key || event.metaKey || event.ctrlKey || event.altKey)
+        return;
+      if (isTyping(event.target)) return;
+      onKey(event);
+    }
+    document.addEventListener("keydown", listener);
+    return () =&gt; document.removeEventListener("keydown", listener);
+  }, [key]);
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">useEffectEvent(handler)</code> همیشه جدیدترین نسخه <code class="ic">handler</code> را صدا می‌زند در حالی که نیازی نیست <code class="ic">handler</code> درون آرایه وابستگی‌های <code class="ic">[key]</code> قرار گیرد.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">بازگرداندن <code class="ic">() =&gt; document.removeEventListener(...)</code> لیسنر را در زمان آنمونت یا تغییر <code class="ic">key</code> به‌خوبی پاکسازی می‌کند.</span></li>
+      </ul>
+    </div>
+
+    <ol class="reveal relative border-r-2 border-storm-600 mr-3 space-y-6">
+      <li class="step mr-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">1</span>
+        <p class="font-semibold text-white">اجرای Setup در زمان مونت</p>
+        <p class="text-sm text-storm-300">ری‌اکت متد <code class="ic">document.addEventListener("keydown", listener)</code> را فراخوانی می‌کند.</p>
+      </li>
+      <li class="step mr-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">2</span>
+        <p class="font-semibold text-white">بررسی پاکسازی در Strict Mode (فقط در محیط توسعه)</p>
+        <p class="text-sm text-storm-300">ری‌اکت بلافاصله آنمونت شدن را شبیه‌سازی کرده و <code class="ic">removeEventListener</code> را اجرا می‌کند تا پاکسازی‌های جاافتاده را کشف کند.</p>
+      </li>
+      <li class="step mr-6 rounded-xl border border-transparent p-3 -my-3">
+        <span class="absolute -right-[13px] grid place-items-center w-6 h-6 rounded-full bg-vivid-400 text-storm-900 font-mono text-xs font-semibold">3</span>
+        <p class="font-semibold text-white">اجرای مجدد Setup برای بار دوم</p>
+        <p class="text-sm text-storm-300">اثبات‌شده در تست‌های <code class="ic">use-hotkey.test.tsx</code>: پس از چرخه <code class="ic">setup → cleanup → setup</code> تنها یک لیسنر ثبت‌شده باقی می‌ماند.</p>
+      </li>
+    </ol>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">مثال: دفعات ثبت لیسنر DOM در طول ۱۰ بار فشردن کلید (هندلر پیکانی درون‌خطی)</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">[key, handler]</code> وابسته</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="10"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-left">۱۰ اتصال</span>
+        </div>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">useEffectEvent</code></span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-left">۱ اتصال</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">بدون <code class="ic">useEffectEvent</code>، ری‌اکت با فشردن هر کلید، لیسنر <code class="ic">document</code> را حذف کرده و مجدداً اضافه می‌کند.</p>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">الگوی Latest-Ref برای تایمرها</h4>
+    <p class="text-storm-200 max-w-3xl">هنگامی که یک <code class="ic">setTimeout</code> به‌جای <code class="ic">useEffect</code> درون یک هندلر رویداد استارت می‌خورد، آخرین نسخه کالبک را درون یک جعبه <code class="ic">useRef</code> نگهداری کنید.</p>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/hooks/use-debounced-callback.ts" data-lang="ts" data-hl="5-10,16-17"><code>export function useDebouncedCallback&lt;Args extends unknown[]&gt;(
+  fn: (...args: Args) =&gt; void,
+  delayMs: number,
+) {
+  const latest = useRef(fn);
+  const timer = useRef&lt;ReturnType&lt;typeof setTimeout&gt; | undefined&gt;(undefined);
+
+  useEffect(() =&gt; {
+    latest.current = fn;
+  });
+
+  useEffect(() =&gt; () =&gt; clearTimeout(timer.current), []);
+
+  return useCallback(
+    (...args: Args) =&gt; {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() =&gt; latest.current(...args), delayMs);
+    },
+    [delayMs],
+  );
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">latest.current = fn</code> درون یک افکت پس از هر کامیت به‌روزرسانی می‌شود.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">هنگامی که تایمر پس از <code class="ic">delayMs</code> (برای مثال ۳۰۰ میلی‌ثانیه) فعال می‌شود، تابع <code class="ic">latest.current(...args)</code> را با جدیدترین مقادیر props و state فراخوانی می‌کند.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="box" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">چرا <code class="ic">useRef</code>؟</p>
+        <p class="mt-1 text-sm text-storm-300"><code class="ic">{ current: value }</code> یک ظرف تغییرپذیر است که در طول رندرهای مختلف زنده می‌ماند، بدون آنکه تغییر فیلد <code class="ic">.current</code> رندر مجددی ایجاد نماید.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="lock" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">چرا از <code class="ic">useEffectEvent</code> استفاده نمی‌کنیم؟</p>
+        <p class="mt-1 text-sm text-storm-300">توابع حاصل از Effect Event را فقط می‌توان از درون خود <code class="ic">useEffect</code> صدا زد. در اینجا تایمر درون یک هندلر رویداد فراخواننده (<code class="ic">onChange</code>) شروع می‌شود.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="triangle-alert" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">چرا مقدار <code class="ic">latest.current</code> را در حین رندر نمی‌نویسیم؟</p>
+        <p class="mt-1 text-sm text-storm-300">موتور همروند (Concurrent) ری‌اکت ممکن است رندری را آغاز کرده و آن را نیمه‌کاره رها کند یا با ترتیبی نامنتظره رندر نماید. تغییر دادن یک Ref حین رندر، خلوص آن را نقض می‌کند.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">مقادیر ایمن مرورگر در زمان هایدریشن با useSyncExternalStore</h4>
+    <p class="text-storm-200 max-w-3xl">سرور تاریخ‌ها را بر مبنای UTC قالب‌بندی می‌کند در حالی که مرورگر از منطقه زمانی کاربر (مثلاً <code class="ic">+04:00</code>) بهره می‌برد. فراخوانی مستقیم <code class="ic">date.toLocaleString()</code> حین رندر باعث می‌شود سرور ساعت <code class="ic">14:00 UTC</code> و مرورگر ساعت <code class="ic">18:00</code> را تولید کند که منجر به خطای عدم تطابق هایدریشن (Hydration Mismatch) در ری‌اکت می‌گردد. هوک <code class="ic">useSyncExternalStore</code> تضمین می‌کند HTML اولیه سرور و گذر نخست هایدریشن کلاینت کاملاً یکسان باشند و سپس به زمان محلی تبدیل شوند.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>سرور با UTC رندر می‌کند، هایدریشن کلاینت با همان UTC تطابق می‌یابد، سپس پس از هایدریشن به زمان محلی +04:00 سوییچ می‌کند</title>
+          <rect x="14" y="42" width="205" height="130" rx="16" fill="#153139" stroke="#2E464C"/>
+          <text x="116" y="72" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">۱. رندر SSR سرور (UTC)</text>
+          <text x="116" y="96" text-anchor="middle" fill="#879497" font-size="13">آرگومان ۳ را صدا می‌زند (سرور)</text>
+          <rect x="34" y="114" width="165" height="38" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="116" y="138" text-anchor="middle" fill="#81F7F7" font-size="14" font-weight="600">14:00 UTC</text>
+
+          <line x1="219" y1="107" x2="251" y2="107" stroke="#879497" stroke-width="2" marker-end="url(#arw)"/>
+
+          <rect x="259" y="42" width="205" height="130" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="361" y="72" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="600">۲. هایدریشن در کلاینت</text>
+          <text x="361" y="96" text-anchor="middle" fill="#879497" font-size="13">آرگومان ۳ را صدا می‌زند (UTC)</text>
+          <rect x="279" y="114" width="165" height="38" rx="10" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="361" y="138" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">14:00 UTC (کاملاً منطبق!)</text>
+
+          <line x1="464" y1="107" x2="496" y2="107" stroke="#02EFF0" stroke-width="2.5" marker-end="url(#arw-cyan)"/>
+
+          <rect x="504" y="42" width="202" height="130" rx="16" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="605" y="72" text-anchor="middle" fill="#02EFF0" font-size="15" font-weight="600">۳. پس از پایان هایدریشن</text>
+          <text x="605" y="96" text-anchor="middle" fill="#879497" font-size="13">آرگومان ۲ را صدا می‌زند (کلاینت)</text>
+          <rect x="524" y="114" width="162" height="38" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="605" y="138" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">18:00 (+04:00)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">هم رندر سمت سرور و هم اولین گذر هایدریشن کلاینت آرگومان سوم را می‌خوانند، بنابراین ساختار HTML با دقت ۱۰۰٪ مطابقت دارد و سپس به آرگومان دوم ارتقا می‌یابد.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/local-time.tsx" data-lang="ts" data-hl="4-8"><code>const subscribe = () =&gt; () =&gt; {};
+
+export function LocalTime({ date }: { date: Date }) {
+  const text = useSyncExternalStore(
+    subscribe,
+    () =&gt; formatLocalDateTime(date), // 2nd arg: Client snapshot (after hydration)
+    () =&gt; formatDateTime(date),      // 3rd arg: Server &amp; hydration snapshot (UTC)
+  );
+  return &lt;time dateTime={date.toISOString()}&gt;{text}&lt;/time&gt;;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">آرگومان سوم (<code class="ic">formatDateTime</code>) روی سرور و در گذر ابتدایی هایدریشن کلاینت فراخوانی می‌شود.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">درست پس از تکمیل موفقیت‌آمیز هایدریشن، ری‌اکت به سراغ آرگومان دوم (<code class="ic">formatLocalDateTime</code>) می‌رود.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> الگوی قدیمی <code class="ic">useState("")</code> + <code class="ic">useEffect</code></p>
+        <p class="mt-3 text-storm-200">روی سرور یک رشته خالی <code class="ic">""</code> رندر می‌کند که باعث برچسب‌های زمانی خالی در HTML اولیه SSR و جابه‌جایی چیدمان صفحه (Layout Shift) پس از بارگذاری می‌شود.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> هوک مدرن <code class="ic">useSyncExternalStore</code></p>
+        <p class="mt-3 text-storm-200">یک برچسب زمانی واقعی بر پایه UTC در HTML سرور می‌سازد، بدون کمترین عدم تطابقی هایدریت می‌شود، و درجا به منطقه زمانی محلی ارتقا پیدا می‌کند.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پرسش‌های مصاحبه سنیور</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">در محیط توسعه، هوک <code class="ic">useEffect</code> من هنگام مونت کامپوننت دو بار اجرا می‌شود. آیا این یک باگ است، و چگونه باید با آن رفتار کرد؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">این یک رفتار کاملاً عمدی و طراحی‌شده توسط <code class="ic">&lt;StrictMode&gt;</code> ری‌اکت است.</strong> ری‌اکت در محیط توسعه آنمونت و مونت مجدد هر کامپوننت را شبیه‌سازی می‌کند (<code class="ic">setup → cleanup → setup</code>) تا راستی‌آزمایی کند که تابع پاکسازی (Cleanup) شما کلیه آثار فاز <code class="ic">setup</code> را پاک می‌کند.</p>
+        <p>هرگز اجرای دوم را با متغیرهای قفلی مثل <code class="ic">useRef(false)</code> مسدود نکنید. در عوض یک تابع پاکسازی اصولی نظیر <code class="ic">removeEventListener</code>، <code class="ic">clearTimeout</code> یا <code class="ic">abortController.abort()</code> بنویسید.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">هنگام رندر داده‌های مختص مرورگر مانند <code class="ic">window.innerWidth</code>، <code class="ic">localStorage</code> یا منطقه زمانی کاربر، چگونه جلوی بروز خطای Hydration Mismatch را می‌گیرید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">از هوک <code class="ic">useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)</code> استفاده کنید.</strong></p>
+        <p>در تابع <code class="ic">getServerSnapshot</code> یک مقدار قطعی و معین برگردانید (که در رندر SSR سرور و اولین گذر هایدریشن مصرف شود) و API مرورگر را در تابع <code class="ic">getClientSnapshot</code> درست پس از تکمیل هایدریشن بخوانید.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-03" data-toc="۳.۳ ترکیب و الگوی دونات" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.3</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">سرور و کلاینت · الگوی دونات · کانتکست · useId</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">ترکیب کامپوننت‌ها و الگوی دونات (Donut Pattern)</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">یک کامپوننت کلاینت می‌تواند <mark class="hl">کامپوننت‌های سرور را در قالب children احاطه کند</mark> بدون اینکه حجم کدهای آن‌ها به باندل جاوااسکریپت مرورگر تحمیل شود.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="frame" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">تصویر دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">یک کامپوننت کلاینت شبیه یک قاب عکس مجهز به پیچ تنظیم روشنایی است. کامپوننت سرور مثل عکس چاپ‌شده‌ای است که درون این قاب قرار می‌گیرد.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">مرز سرور/کلاینت و الگوی دونات</h4>
+    <p class="text-storm-200 max-w-3xl">در ساختار App Router در Next.js، همه کامپوننت‌ها به‌طور پیش‌فرض کامپوننت سرور (Server Component) هستند مگر آنکه فایل با راهنمای <code class="ic">"use client"</code> آغاز شود. کامپوننت‌های سرور منحصراً روی سرور اجرا می‌شوند، می‌توانند مستقیماً کوئری‌های دیتابیس را <code class="ic">await</code> کنند، و حجم خروجی آن‌ها برابر با <code class="ic">0 KB JS</code> برای مرورگر است.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-coral-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-coral-500/10 text-coral-400 grid place-items-center"><i data-lucide="triangle-alert" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">قاعده ۱ · ایمپورت‌ها به کد کلاینت تبدیل می‌شوند</p>
+        <p class="mt-1 text-sm text-storm-300">هر ماژولی که مستقیماً توسط یک فایل دارای <code class="ic">"use client"</code> ایمپورت شود، درون باندل کلاینت جاوااسکریپت بسته‌بندی خواهد شد.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white">قاعده ۲ · راه نجات با الگوی دونات</p>
+        <p class="mt-1 text-sm text-storm-300">یک کامپوننت <code class="ic">"use client"</code> می‌تواند کامپوننت‌های سرور را در قالب <code class="ic">children</code> (یا هر پراپ JSX دیگری) بپذیرد، در حالی که ماهیت سروری آن‌ها حفظ می‌گردد.</p>
+      </div>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 740 290" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>ترکیب دونات در ProjectPage: حلقه‌های کلاینت کامپوننت‌های سرور پاس‌داده‌شده درون اسلات children را در بر می‌گیرند</title>
+          <rect x="14" y="14" width="712" height="262" rx="20" fill="#0F282F" stroke="#2E464C"/>
+          <text x="34" y="42" fill="#FFFFFF" font-size="15" font-weight="600">IssueListView (کامپوننت سرور · ۰ کیلوبایت JS)</text>
+
+          <rect x="34" y="58" width="672" height="200" rx="18" fill="#153139" stroke="#02EFF0" stroke-width="2"/>
+          <text x="54" y="84" fill="#02EFF0" font-size="14" font-weight="600">ListPendingProvider (حلقه "use client" · مالک useTransition)</text>
+
+          <rect x="54" y="100" width="295" height="140" rx="14" fill="#0F282F" stroke="#2E464C"/>
+          <text x="201" y="126" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">IssueFilters (سرور · ۰ کیلوبایت JS)</text>
+          <text x="201" y="146" text-anchor="middle" fill="#879497" font-size="13">پاس‌داده‌شده از طریق اسلات children</text>
+          <rect x="78" y="164" width="247" height="58" rx="12" fill="#153139" stroke="#02EFF0"/>
+          <text x="201" y="189" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">SearchBox ("use client")</text>
+          <text x="201" y="208" text-anchor="middle" fill="#81F7F7" font-size="13">صدا زدن startTransition()</text>
+
+          <rect x="375" y="100" width="311" height="140" rx="14" fill="#153139" stroke="#02EFF0" stroke-width="2"/>
+          <text x="530" y="126" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">PendingRegion (حلقه "use client")</text>
+          <text x="530" y="145" text-anchor="middle" fill="#879497" font-size="13">محو شدن با opacity-60 و aria-busy</text>
+          <rect x="397" y="158" width="267" height="66" rx="12" fill="#0F282F" stroke="#2E464C"/>
+          <text x="530" y="185" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">IssueTable + Pagination</text>
+          <text x="530" y="206" text-anchor="middle" fill="#81F7F7" font-size="13">سرور · ۰ کیلوبایت JS (حفره داخلی children)</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">کامپوننت <code class="ic">IssueListView</code> کامپوننت‌های سروری <code class="ic">IssueFilters</code> و <code class="ic">IssueTable</code> را روی سرور رندر کرده و آن‌ها را درون شکاف‌های کلاینتی <code class="ic">ListPendingProvider</code> و <code class="ic">PendingRegion</code> جای می‌دهد.</figcaption>
+    </figure>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">معماری Context در ری‌اکت ۱۹: دور نگه داشتن وضعیت‌های متغیر از کانتکست‌های فراگیر</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">ToastContext</code> فقط تابع پایدار <code class="ic">toast</code> را در اختیار می‌گذارد، نه آرایه متغیر <code class="ic">toasts</code> را.</p>
+
+    <figure class="reveal rounded-2xl border border-storm-700 bg-storm-900 p-5 md:p-6">
+      <figcaption class="text-sm font-semibold text-white">مثال: کامپوننت‌های رندر مجدد شده به ازای هر اعلان توست (برنامه‌ای با ۲۵ مصرف‌کننده <code class="ic">useToast()</code>)</figcaption>
+      <div data-chart class="mt-5 space-y-4">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200"><code class="ic">toasts</code> در Context</span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-coral-400" data-value="25"></div></div>
+          <span class="font-mono text-sm text-coral-300 text-left">۲۵ رندر</span>
+        </div>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[12rem_1fr_6rem] items-center gap-x-3 gap-y-1.5 sm:gap-3">
+          <span class="col-span-2 sm:col-span-1 text-sm text-storm-200">فقط تابع <code class="ic">toast</code></span>
+          <div class="h-3.5 rounded-full bg-storm-700 overflow-hidden"><div class="bar h-full rounded-full bg-vivid-400" data-value="1"></div></div>
+          <span class="font-mono text-sm text-vivid-300 text-left">۱ رندر</span>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-storm-400">هنگامی که Context فقط تابع پایدار <code class="ic">toast</code> را حمل می‌کند، با باز یا بسته شدن توست‌ها تنها کامپوننت <code class="ic">ToastRegion</code> رندر مجدد می‌شود.</p>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/toast/toast-provider.tsx" data-lang="ts" data-hl="1,4"><code>const ToastContext = createContext&lt;ShowToast | null&gt;(null);
+
+export function useToast(): ShowToast {
+  const toast = use(ToastContext);
+  if (!toast) throw new Error("useToast must be used inside &lt;ToastProvider&gt;.");
+  return toast;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">ToastContext</code> حاوی تایپ <code class="ic">ShowToast</code> (یک کالبک پایدار) است، نه آرایه <code class="ic">ToastItem[]</code>.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">دستور <code class="ic">use(ToastContext)</code> این کانتکست را با بهره‌گیری از هوک مدرن <code class="ic">use()</code> در ری‌اکت ۱۹ می‌خواند.</span></li>
+      </ul>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> سینتکس نسخه‌های قدیمی ری‌اکت</p>
+        <p class="mt-3 text-storm-200">رندر کردن <code class="ic">&lt;ToastContext.Provider value={toast}&gt;</code> و خواندن با <code class="ic">useContext(ToastContext)</code>، که قابلیت فراخوانی درون بلاک‌های <code class="ic">if</code> را نداشت.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> سینتکس مدرن در ری‌اکت ۱۹</p>
+        <p class="mt-3 text-storm-200">رندر مستقیم <code class="ic">&lt;ToastContext value={toast}&gt;</code> و خواندن با <code class="ic">use(ToastContext)</code>، که می‌تواند به‌صورت شرطی پس از returnهای زودهنگام یا درون بلاک‌های <code class="ic">if</code> صدا زده شود.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">هوک useId و علت شکست شناسه‌های ثابت DOM در Next.js 16</h4>
+    <p class="text-storm-200 max-w-3xl">نسخه ۱۶ فریم‌ورک Next.js از کامپوننت جدید <code class="ic">&lt;Activity&gt;</code> ری‌اکت استفاده می‌کند تا مسیرهای قبلی را به‌صورت پنهان در DOM نگه دارد. اگر هر دو مسیر <code class="ic">/issues/new</code> و <code class="ic">/issues/1/edit</code> ویژگی ثابت <code class="ic">id="title"</code> را رندر کنند، کلیک کردن روی لیبل در صفحه ویرایش باعث پرش فوکوس به فیلد ورودی پنهان‌شده در صفحه ایجاد ایشیو می‌شود.</p>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 230" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>تداخل دو صفحه نگه‌داشته شده در DOM توسط Activity روی شناسه ثابت title، و حل آن با useFieldId و useId</title>
+          <rect x="16" y="24" width="310" height="132" rx="16" fill="#153139" stroke="#2E464C" stroke-dasharray="6 4"/>
+          <text x="171" y="52" text-anchor="middle" fill="#879497" font-size="14" font-weight="600">/issues/new (مخفی‌شده توسط &lt;Activity&gt;)</text>
+          <rect x="44" y="72" width="254" height="64" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="171" y="98" text-anchor="middle" fill="#FF7A6B" font-size="13" font-weight="600">&lt;input id="title"&gt; (اولین در DOM)</text>
+          <text x="171" y="120" text-anchor="middle" fill="#879497" font-size="13">هنگام کلیک روی لیبل، فوکوس را می‌دزدد!</text>
+
+          <rect x="394" y="24" width="310" height="132" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="549" y="52" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="600">/issues/1/edit (صفحه فعال و مرئی)</text>
+          <rect x="422" y="72" width="254" height="64" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="549" y="98" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">&lt;label htmlFor="title"&gt;</text>
+          <text x="549" y="120" text-anchor="middle" fill="#879497" font-size="13">&lt;input id="title"&gt; (دومین در DOM)</text>
+
+          <path d="M 422 95 L 304 95" fill="none" stroke="#FF7A6B" stroke-width="2.5" marker-end="url(#arw-coral)"/>
+          <text x="360" y="84" text-anchor="middle" fill="#FF7A6B" font-size="13">هدف اشتباه!</text>
+
+          <rect x="16" y="174" width="688" height="42" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="360" y="200" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">راه‌حل: useFieldId از useId بهره می‌برد ← هر فرم پیشوند اختصاصی خود را دریافت می‌کند</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">هنگامی که <code class="ic">&lt;Activity&gt;</code> مسیرهای قبلی را در حالت مونت نگه می‌دارد، شناسه‌های ثابت دچار تداخل می‌شوند. هوک <code class="ic">useId()</code> یک پیشوند منحصربه‌فرد برای هر نمونه کامپوننت تولید می‌کند که میان SSR سرور و هایدریشن کلاینت کاملاً همخوان است.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/use-field-id.ts" data-lang="ts" data-hl="2-3"><code>export function useFieldId() {
+  const base = useId();
+  return (name: string) =&gt; `${base}-${name}`;
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">useId()</code> یک شناسه معین و پایدار می‌سازد که بین سرور و هایدریشن کلاینت مشترک است.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">هر فرم مونت‌شده فضای نام اختصاصی خود را خواهد داشت (برای مثال <code class="ic">${base}-title</code>).</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پرسش‌های مصاحبه سنیور</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">آیا یک کامپوننت کلاینت می‌تواند یک کامپوننت سرور را رندر کند؟ گراف ماژول‌ها در این سناریو چگونه کار می‌کند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-coral-300">عدم امکان ایمپورت مستقیم:</strong> یک کامپوننت کلاینت نمی‌تواند یک کامپوننت سرور را <code class="ic">import</code> کند. عبارت <code class="ic">"use client"</code> مرزی را معین می‌سازد که تمامی فایل‌های ایمپورت‌شده در آن برای مرورگر باندل می‌شوند.</p>
+        <p><strong class="text-vivid-300">امکان رندر از طریق Props:</strong> یک کامپوننت سرور والد می‌تواند یک کامپوننت سرور دیگر را از طریق پراپ <code class="ic">children</code> یا هر پراپ JSX دیگری به یک کامپوننت کلاینت ارسال کند. ری‌اکت کامپوننت سرور را روی سرور به یک پی‌لود سریالایز شده RSC (توصیف مجازی DOM) رندر کرده و آن را در اسلات کلاینت قرار می‌دهد.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">هنگام استفاده از React Context برای قابلیت‌های سراسری رابط کاربری نظیر توست‌ها یا پنجره‌های مودال، چگونه از رندرهای مجدد بیهوده جلوگیری می‌کنید؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">کانتکست فرمان/ارسال را از لایه نمایش وضعیت کاملاً تفکیک کنید.</strong></p>
+        <p>تنها توابع پایدار (مانند <code class="ic">showToast</code>) را در کانتکست عمومی و فراگیر قرار دهید تا کامپوننت‌هایی که پیام ارسال می‌کنند هرگز با تغییر لیست توست‌ها رندر مجدد نشوند. تنها کامپوننت محلی <code class="ic">&lt;ToastRegion&gt;</code> باید آرایه متغیر توست‌های فعال را نگهداری کرده یا بخواند.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="rx-04" data-toc="۳.۴ قابلیت‌های همروند و فرم‌ها" class="chapter py-16 border-t border-storm-700/60 space-y-12">
+  <header class="reveal">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="chip-num">3.4</span>
+      <span class="text-xs uppercase tracking-[.2em] text-storm-300">useTransition · useOptimistic · useActionState · useFormStatus</span>
+    </div>
+    <h3 class="mt-4 text-3xl md:text-5xl font-semibold text-white leading-[1.1] tracking-tight">قابلیت‌های همروند و فرم‌ها در ری‌اکت ۱۹</h3>
+    <p class="mt-5 text-xl md:text-2xl font-light text-storm-100 max-w-3xl leading-snug">ری‌اکت ۱۹ کدهای تکراری مدیریت دستی <code class="ic">isLoading</code> و منطق بازگشت (Rollback) را با <mark class="hl">چهار هوک هماهنگ</mark> برای ترنزیشن‌ها، رابط کاربری خوش‌بینانه و فرم‌ها جایگزین کرده است.</p>
+  </header>
+
+  <div class="reveal rounded-3xl bg-white text-storm-900 p-6 md:p-8 flex flex-col sm:flex-row gap-5 sm:items-center shadow-[0_24px_70px_-25px_rgba(2,239,240,.45)]">
+    <div class="shrink-0 w-16 h-16 rounded-2xl bg-storm-900 text-vivid-400 grid place-items-center"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[.2em] text-vivid-700">تصویر دنیای واقعی</p>
+      <p class="mt-1.5 text-lg md:text-xl font-medium leading-snug">گارسونی که بلافاصله روی برگه سفارش میز شما می‌نویسد «در حال آماده‌سازی»، و اگر آشپزخانه اعلام کند موجودی تمام شده، آن را فوراً پاک می‌کند.</p>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">چهار هوک هماهنگ در ری‌اکت ۱۹</h4>
+    <p class="text-storm-200 max-w-3xl">سه هوک از بسته اصلی <code class="ic">react</code> و یک هوک از بسته <code class="ic">react-dom</code> ارائه می‌شوند.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl border border-coral-400/40 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-coral-300"><i data-lucide="circle-x" class="w-5 h-5"></i> عادت انگولار یا نسخه‌های قدیمی ری‌اکت</p>
+        <p class="mt-3 text-storm-200">مدیریت دستی متغیرهای <code class="ic">isLoading</code>، <code class="ic">error</code>، و ذخیره متغیر <code class="ic">prevValue</code> همراه با کدهای بازگشت در بلوک‌های <code class="ic">try / catch</code> با هر تغییر وضعیت.</p>
+      </div>
+      <div class="reveal rounded-2xl border border-vivid-400/50 bg-storm-900 p-5 md:p-6">
+        <p class="flex items-center gap-2 font-semibold text-vivid-300"><i data-lucide="circle-check" class="w-5 h-5"></i> شیوه مدرن ری‌اکت ۱۹</p>
+        <p class="mt-3 text-storm-200">هماهنگ‌سازی جهش‌های ناهمگام با استفاده از <code class="ic">useTransition</code>، <code class="ic">useOptimistic</code>، <code class="ic">useActionState</code> و <code class="ic">useFormStatus</code>.</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="activity" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useTransition</code> · از پکیج <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">اجرای یک به‌روزرسانی وضعیت یا اکشن ناهمگام در پس‌زمینه بدون مسدود ساختن ورودی کاربر؛ ردیابی وضعیت <code class="ic">pending</code>. مثال‌ها: <code class="ic">StatusControl</code>، <code class="ic">SearchBox</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useOptimistic</code> · از پکیج <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">نمایش بی‌درنگ حالت جدید رابط کاربری در حین در جریان بودن ترنزیشن یا اکشن ناهمگام؛ بازگشت خودکار در صورت لغو یا خطا. مثال‌ها: <code class="ic">StatusControl</code>، <code class="ic">CommentThread</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="sliders" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useActionState</code> · از پکیج <code class="ic">react</code></p>
+        <p class="mt-1 text-sm text-storm-300">متصل ساختن یک <code class="ic">&lt;form&gt;</code> به امضای <code class="ic">(prevState, formData) =&gt; nextState</code>، با ردیابی آخرین <code class="ic">FormState</code> و وضعیت <code class="ic">isPending</code>. مثال‌ها: <code class="ic">IssueForm</code>، <code class="ic">CommentThread</code>.</p>
+      </div>
+      <div class="reveal rounded-2xl bg-storm-800/70 border border-storm-600 p-5 hover:border-vivid-400/60 transition">
+        <div class="w-11 h-11 rounded-xl bg-vivid-400/10 text-vivid-400 grid place-items-center"><i data-lucide="send" class="w-5 h-5"></i></div>
+        <p class="mt-4 font-semibold text-white"><code class="ic">useFormStatus</code> · از پکیج <code class="ic">react-dom</code></p>
+        <p class="mt-1 text-sm text-storm-300">خواندن مقادیر <code class="ic">{ pending, data }</code> فرم دربرگیرنده (<code class="ic">&lt;form&gt;</code>) از درون یک کامپوننت فرزند. مثال: <code class="ic">SubmitButton</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">هماهنگی میان useTransition و useOptimistic</h4>
+    <p class="text-storm-200 max-w-3xl">کامپوننت <code class="ic">StatusControl</code> منوی آبشاری را فوراً به‌روزرسانی می‌کند و اجازه می‌دهد ری‌اکت هر دو فرآیند تأیید سمت سرور و بازگشت خودکار در صورت خطا را به‌زیبایی مدیریت کند.</p>
+
+    <div data-stepper class="reveal rounded-3xl border border-storm-700 bg-storm-900/70 p-5 md:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm font-semibold text-white">چرخه حیات ۶ مرحله‌ای در <code class="ic">StatusControl</code> · شاخه موفقیت در برابر شکست</p>
+        <button data-play type="button" class="inline-flex items-center gap-2 rounded-xl bg-vivid-400 text-storm-900 text-sm font-semibold px-3.5 py-2 hover:bg-vivid-300"><i data-lucide="play" class="w-4 h-4"></i> پخش</button>
+      </div>
+      <div class="mt-5 flex flex-col lg:flex-row lg:items-stretch gap-2">
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">01</p>
+          <p class="font-semibold text-white">انتخاب</p>
+          <p class="text-xs text-storm-300">کاربر گزینه <code class="ic">"in_progress"</code> را برمی‌گزیند.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">02</p>
+          <p class="font-semibold text-white">ترنزیشن</p>
+          <p class="text-xs text-storm-300"><code class="ic">startTransition</code> مقدار <code class="ic">pending = true</code> را تنظیم می‌کند.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">03</p>
+          <p class="font-semibold text-white">رابط آپتیمیستیک</p>
+          <p class="text-xs text-storm-300"><code class="ic">setOptimisticStatus</code> تغییر را بدون کمترین تأخیری نشان می‌دهد.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-storm-600 bg-storm-800 px-4 py-3">
+          <p class="font-mono text-[11px] text-storm-400">04</p>
+          <p class="font-semibold text-white">سرور اکشن</p>
+          <p class="text-xs text-storm-300">فراخوانی <code class="ic">changeStatusAction</code> + <code class="ic">updateTag</code>.</p>
+        </div>
+        <div class="self-center text-vivid-400 -rotate-90 lg:rotate-0" aria-hidden="true"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+        <div class="step flex-1 rounded-xl border border-vivid-400/60 bg-vivid-400/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-vivid-300">05 · در صورت موفقیت</p>
+          <p class="font-semibold text-white">ارسال استریم Prop جدید</p>
+          <p class="text-xs text-storm-300">سرور <code class="ic">status="in_progress"</code> را می‌فرستد؛ بدون پرش تصویر.</p>
+        </div>
+        <div class="self-center shrink-0 grid place-items-center w-9 h-9 rounded-full border border-storm-500 bg-storm-900 font-mono text-xs font-semibold text-white">یا</div>
+        <div class="step flex-1 rounded-xl border border-coral-400/60 bg-coral-500/10 px-4 py-3">
+          <p class="font-mono text-[11px] text-coral-300">05 · در صورت خطا</p>
+          <p class="font-semibold text-white">بازگشت خودکار</p>
+          <p class="text-xs text-storm-300">ترنزیشن تمام می‌شود؛ ری‌اکت به مقدار اصلی <code class="ic">status</code> در سرور بازمی‌گردد.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/features/issues/components/status-control.tsx" data-lang="ts" data-hl="1-2,5-7"><code>const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
+const [pending, startTransition] = useTransition();
+
+function onChange(next: IssueStatus) {
+  startTransition(async () =&gt; {
+    setOptimisticStatus(next);
+    const result = await changeStatusAction(issueId, next);
+    if (result.ok) toast(`Status changed to ${STATUS_LABELS[next]}.`);
+    else toast(result.message, "error");
+  });
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200"><code class="ic">setOptimisticStatus(next)</code> وضعیت نمایش‌داده‌شده را پیش از شروع درخواست شبکه تغییر می‌دهد.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">اگر <code class="ic">result.ok</code> برابر با <code class="ic">false</code> باشد، شما فقط یک پیام خطای توست نشان می‌دهید؛ ری‌اکت با اتمام ترنزیشن، پوشش خوش‌بینانه را به‌صورت خودکار کنار می‌گذارد.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">چرا SubmitButton باید یک کامپوننت فرزند مستقل باشد</h4>
+    <p class="text-storm-200 max-w-3xl"><code class="ic">useFormStatus()</code> دقیقاً مانند خواندن Context از نزدیک‌ترین تگ والد <code class="ic">&lt;form&gt;</code> عمل می‌کند.</p>
+
+    <div class="reveal rounded-2xl border border-coral-400/40 bg-coral-500/10 p-5">
+      <p class="flex items-center gap-2 text-coral-300 text-xs font-semibold uppercase tracking-[.2em]"><i data-lucide="triangle-alert" class="w-4 h-4"></i> دام پروداکشن</p>
+      <p class="mt-2 text-white font-semibold">فراخوانی <code class="ic">useFormStatus()</code> در همان کامپوننتی که <code class="ic">&lt;form&gt;</code> را رندر می‌کند همواره برابر با <code class="ic">false</code> است</p>
+      <p class="mt-1 text-sm text-storm-200">هوکی که در سطحی بالاتر از <code class="ic">&lt;form&gt;</code> صدا زده شود، هیچ فرم والدی برای خواندن اطلاعات ندارد. همیشه <code class="ic">useFormStatus()</code> را درون یک کامپوننت فرزند که <em>داخل</em> <code class="ic">&lt;form&gt;...&lt;/form&gt;</code> قرار می‌گیرد فراخوانی نمایید.</p>
+    </div>
+
+    <figure class="reveal rounded-3xl border border-storm-700 bg-storm-900 p-4 md:p-6">
+      <div class="overflow-x-auto">
+        <svg viewBox="0 0 720 220" class="w-full min-w-[540px] h-auto" role="img" font-family="Vazirmatn, Lexend, sans-serif">
+          <title>فراخوانی useFormStatus در همان کامپوننت فرم که همیشه مقدار false دارد، در برابر کامپوننت فرزند SubmitButton درون فرم که مقدار pending را true می‌خواند</title>
+          <rect x="16" y="24" width="320" height="172" rx="16" fill="#153139" stroke="#FF7A6B"/>
+          <text x="176" y="52" text-anchor="middle" fill="#FF7A6B" font-size="14" font-weight="600">اشتباه: در همان کامپوننت حاوی &lt;form&gt;</text>
+          <rect x="38" y="68" width="276" height="42" rx="10" fill="#0F282F" stroke="#FF7A6B"/>
+          <text x="176" y="94" text-anchor="middle" fill="#FF7A6B" font-size="13">useFormStatus() → pending: false</text>
+          <rect x="38" y="124" width="276" height="54" rx="10" fill="#0F282F" stroke="#2E464C"/>
+          <text x="176" y="156" text-anchor="middle" fill="#879497" font-size="13">return &lt;form&gt;&lt;button /&gt;&lt;/form&gt;</text>
+
+          <rect x="384" y="24" width="320" height="172" rx="16" fill="#153139" stroke="#02EFF0"/>
+          <text x="544" y="52" text-anchor="middle" fill="#02EFF0" font-size="14" font-weight="600">درست: فرزند تودرتو درون &lt;form&gt;</text>
+          <rect x="406" y="68" width="276" height="114" rx="12" fill="#0F282F" stroke="#02EFF0"/>
+          <text x="544" y="92" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">&lt;form action={dispatch}&gt;</text>
+          <rect x="428" y="106" width="232" height="60" rx="10" fill="#153139" stroke="#02EFF0"/>
+          <text x="544" y="130" text-anchor="middle" fill="#02EFF0" font-size="13" font-weight="600">&lt;SubmitButton&gt;</text>
+          <text x="544" y="152" text-anchor="middle" fill="#81F7F7" font-size="13">فرم والد ← pending: true</text>
+        </svg>
+      </div>
+      <figcaption class="mt-3 text-sm text-storm-300">کامپوننت <code class="ic">SubmitButton</code> درون تگ <code class="ic">&lt;form&gt;</code> قرار دارد، از این رو <code class="ic">useFormStatus()</code> وضعیت <code class="ic">pending</code> نزدیک‌ترین فرم والد را به‌درستی دریافت می‌کند.</figcaption>
+    </figure>
+
+    <div class="grid lg:grid-cols-[1.25fr_1fr] gap-6 items-start">
+      <pre data-file="src/components/submit-button.tsx" data-lang="ts" data-hl="2,4-5"><code>export function SubmitButton({ children, pendingLabel, ...props }) {
+  const { pending } = useFormStatus();
+  return (
+    &lt;Button type="submit" disabled={pending || props.disabled} aria-disabled={pending} {...props}&gt;
+      {pending &amp;&amp; pendingLabel ? pendingLabel : children}
+    &lt;/Button&gt;
+  );
+}</code></pre>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="badge-num">1</span><span class="text-storm-200">هوک <code class="ic">useFormStatus()</code> وضعیت <code class="ic">{ pending }</code> را از تگ دربرگیرنده <code class="ic">&lt;form&gt;</code> دریافت می‌کند.</span></li>
+        <li class="flex gap-3"><span class="badge-num">2</span><span class="text-storm-200">در زمان اجرای اکشن فرم، دکمه خودش را غیرفعال کرده و برچسب <code class="ic">pendingLabel</code> را جایگزین می‌نماید.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <h4 class="subhead">پرسش‌های مصاحبه سنیور</h4>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۱</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">تفاوت بین یک به‌روزرسانی عادی وضعیت با وضعیتی که درون <code class="ic">startTransition</code> قرار می‌گیرد چیست؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300">فوری در برابر غیرفوری:</strong> آپدیت‌های عادی وضعیت (مانند تایپ کردن در یک ورودی <code class="ic">&lt;input&gt;</code>) فوری (Urgent) و همگام هستند؛ آن‌ها رابط کاربری را تا زمان پایان رندر مسدود می‌کنند.</p>
+        <p><strong class="text-vivid-300">ترنزیشن‌های قابل وقفه (Interruptible):</strong> قرار دادن یک آپدیت (یا ناوبری روتر Next.js) درون <code class="ic">startTransition</code> آن را به‌عنوان عملیاتی غیرفوری و قابل وقفه نشانه‌گذاری می‌کند. در حین در جریان بودن یک ترنزیشن، ری‌اکت رابط کاربری فعلی را روی صفحه کاملاً تعاملی نگه می‌دارد به‌جای اینکه یک صفحه خالی یا لودر نشان دهد. چنانچه کاربر مجدداً کلیدی را فشار دهد، ری‌اکت رندر ناتمام قبلی را متوقف کرده و رندر جدید را در اولویت می‌گذارد.</p>
+      </div>
+    </article>
+
+    <article class="reveal rounded-3xl border border-vivid-400/30 bg-gradient-to-br from-storm-800 to-storm-900 p-6 md:p-8">
+      <p class="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-vivid-400 font-semibold"><i data-lucide="message-square-quote" class="w-4 h-4"></i> پاسخ مصاحبه · سؤال ۲</p>
+      <h4 class="mt-3 text-xl md:text-2xl font-semibold text-white leading-snug">هوک <code class="ic">useOptimistic</code> هنگام شکست یک جهش در سمت سرور، چگونه بازگشت به حالت قبل (Rollback) را مدیریت می‌کند؟</h4>
+      <div class="mt-5 grid gap-3 text-storm-100">
+        <p><strong class="text-vivid-300"><code class="ic">useOptimistic(passthroughState)</code> هرگز وضعیت را به‌طور دائمی جهش (Mutate) نمی‌دهد.</strong></p>
+        <p>مقدار موقت خوش‌بینانه تنها تا زمانی وجود دارد که اکشن ناهمگام یا <code class="ic">startTransition</code> به‌طور فعال در جریان (Pending) باشد. لحظه‌ای که ترنزیشن به سرانجام برسد، ری‌اکت لایه خوش‌بینانه را کنار گذاشته و به مقدار معتبر و قطعی <code class="ic">passthroughState</code> که از سرور آمده رجوع می‌کند.</p>
+      </div>
+    </article>
+  </div>
+</section>
